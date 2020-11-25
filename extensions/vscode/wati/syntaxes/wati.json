@@ -427,6 +427,101 @@
           ]
         },
         {
+          "comment": "wati specific matches",
+          "patterns": [
+            {
+              "comment": "Numeric literal with incorrect type",
+              "name":"constant.numeric.literal.invalid.wati",
+              "match":"(\\d*\\.\\d+)(i(?:32|64))",
+              "captures": {
+                "2": {
+                  "comment":"the invalid type",
+                  "name":"invalid.wati"
+                }
+              }
+            },
+            {
+              "comment":"Numeric literal",
+              "name":"constant.numeric.literal.wati",
+              "match":"(\\d*\\.?\\d+)((?:i|f)(?:32|64))",
+              "captures":{
+                "1": {
+                  "comment":"number",
+                  "name":"constant.numeric.float.wati"
+                },
+                "2": {
+                  "comment":"number's type",
+                  "name":"entity.name.type.wati"
+                }
+              }
+            },
+            {
+              "comment":"Set variable without .set",
+              "match":"(\\$[0-9A-Za-z!#$%&'*+\\-./:<=>?@\\\\^_`|~]*\\b) *(=) *(.+)$",
+              "captures": {
+                "1": {
+                  "comment":"Variable name",
+                  "name":"variable.other.wati"
+                },
+                "2": {
+                  "comment": "Equals sign",
+                  "name":"keyword.operator.word.wati"
+                },
+                "3": {
+                  "comment":"What to set var equal to",
+                  "patterns": [
+                    {
+                      "include":"#instructions"
+                    },
+                    {
+                      "include":"#modules"
+                    },
+                    {
+                      "comment":"stack keyword",
+                      "name":"keyword.control.wati",
+                      "match":"stack"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "comment": "Call function with params inline",
+              "name":"special.call.wati",
+              "match":"(call) (\\$[^(\t]+)(\\()(.+)(\\)) *",
+              "captures": {
+                "1": {
+                  "comment": "call",
+                  "name": "keyword.control.wati"
+                },
+                "2": {
+                  "comment": "function name",
+                  "name": "entity.name.function.wati"
+                },
+                "3": {
+                  "comment": "opening parentheses",
+                  "name": "source.wati"
+                },
+                "4": {
+                  "comment":"parameters",
+                  "patterns": [
+                    {
+                      "include":"#instructions"
+                    },
+                    {
+                      "include":"#modules"
+                    }
+                  ]
+                },
+                "5": {
+                  "comment": "closing parentheses",
+                  "name": "meta.brace.round"
+                }
+              }
+            }
+          ]
+        },
+        {
           "comment": "MVP",
           "patterns": [
             {
