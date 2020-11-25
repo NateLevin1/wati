@@ -457,7 +457,7 @@
             },
             {
               "comment":"Set variable without .set",
-              "match":"(\\$[0-9A-Za-z!#$%&'*+\\-./:<=>?@\\\\^_`|~]*\\b) *(=) *(.+)$",
+              "match":"(\\$[0-9A-Za-z!#$%&'*+\\-./:<=>?@\\\\^_`|~]*\\b) *(=) *([^;]+)",
               "captures": {
                 "1": {
                   "comment":"Variable name",
