@@ -1,0 +1,25 @@
+{
+    "name": "wati",
+    "displayName": "wati",
+    "description": "",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.51.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "wati",
+            "aliases": ["WebAssembly Text Format Improved", "wati"],
+            "extensions": [".wati"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "wati",
+            "scopeName": "source.wati",
+            "path": "./syntaxes/wati.json"
+        }]
+    }
+}
