@@ -66,10 +66,28 @@ const makeCompletionItem = (label, options) => {
 const setType = (arr, type) => {
     return arr.map(v => makeCompletionItem(v.label, { documentation: v.documentation ? new vscode.MarkdownString(v.documentation.replace(/TYPE/g, type)) : undefined, kind: v.kind ? v.kind : vscode.CompletionItemKind.Field }));
 };
+// documentation shared between hovers and completion
+const uniDocs = {
+    "TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```\n($offset i32) ($align i32) (result TYPE)\n```",
+    "TYPE.store": "Store a value into memory at a specified offset.\n```\n($offset i32) ($newValue TYPE)\n```",
+    "TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```\n5i32\n```",
+    "TYPE.add": "Add the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+    "TYPE.sub": "Subtract the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+    "TYPE.mul": "Multiply the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+    "TYPE.eq": "Check if parameter 1 and parameter 2 are equal. Returns true (`1i32`) if they are and false (`0i32`) if they aren't.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
+    "TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
+    "i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n($param TYPE) (result i32)\n```",
+    "i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n($param TYPE) (result i32)\n```",
+};
 const sharedAllIAllF = [
-    { label: "load", documentation: "Push a value from memory onto the stack at a specified offset.\n```\n($offset i32) ($align i32) (result TYPE)\n```" },
-    { label: "store", documentation: "Store a value into memory at a specified offset.\n```\n($offset i32) ($newValue TYPE)\n```" },
-    { label: "const", documentation: "Create a constant number of the specified type. Easier syntax in wati is Ntype (e.g. '5i32')." },
+    { label: "load", documentation: uniDocs["TYPE.load"] },
+    { label: "store", documentation: uniDocs["TYPE.load"] },
+    { label: "const", documentation: uniDocs["TYPE.const"] },
+    { label: "add", documentation: uniDocs["TYPE.add"] },
+    { label: "sub", documentation: uniDocs["TYPE.sub"] },
+    { label: "mul", documentation: uniDocs["TYPE.mul"] },
+    { label: "eq", documentation: uniDocs["TYPE.eq"] },
+    { label: "ne", documentation: uniDocs["TYPE.ne"] },
 ];
 const sharedAllI = [
     { label: "load8_s" },
@@ -81,9 +99,6 @@ const sharedAllI = [
     { label: "clz" },
     { label: "ctz" },
     { label: "popcnt" },
-    { label: "add" },
-    { label: "sub" },
-    { label: "mul" },
     { label: "div_s" },
     { label: "div_u" },
     { label: "rem_s" },
@@ -96,9 +111,7 @@ const sharedAllI = [
     { label: "shr_u" },
     { label: "rotl" },
     { label: "rotr" },
-    { label: "eqz" },
-    { label: "eq" },
-    { label: "ne" },
+    { label: "eqz", documentation: uniDocs["i32.eqz"] },
     { label: "lt_s" },
     { label: "lt_u" },
     { label: "gt_s" },
@@ -116,15 +129,10 @@ const sharedAllF = [
     { label: "trunc" },
     { label: "nearest" },
     { label: "sqrt" },
-    { label: "add" },
-    { label: "sub" },
-    { label: "mul" },
     { label: "div" },
     { label: "min" },
     { label: "max" },
     { label: "copysign" },
-    { label: "eq" },
-    { label: "ne" },
     { label: "lt" },
     { label: "gt" },
     { label: "le" },
@@ -348,6 +356,16 @@ class WatiHoverProvider {
             // if nothing else has matched, just be unknown
             // ? Show red underline?
             return new vscode.Hover(`\tunknown`);
+        }
+        else {
+            // might be an instruction or just a random word
+            const capturedWord = word.match(/(i32|i64|f32|f64)\.(\S+)/);
+            if (capturedWord) {
+                // is an instruction
+                let doc = uniDocs["TYPE." + capturedWord[2]]; // check if there is a global type
+                doc = !!doc ? doc : uniDocs[`${capturedWord[1]}.${capturedWord[2]}`]; // if there isn't, check if there is a more specific type
+                return new vscode.Hover(`${!!doc ? doc.replace(/TYPE/g, capturedWord[1]) : "No documentation available."}`);
+            }
         }
         return new vscode.Hover(`${word}\n\nline: ${position.line}\ncharacter: ${position.character}`);
     }
