@@ -45,11 +45,11 @@ class WatiCompletionProvider implements vscode.CompletionItemProvider {
 			} else {
 				const curFunc = getCurFunc(document, position);
 				return [
-					...Object.values(files[document.uri.path].globals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: (v as {type: string}).type})), 
+					...Object.values(files[document.uri.path].globals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(global) ${(v as {type: string}).type}`})), 
 					...(!!curFunc ?
 						[
-							...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: (v as {type: string}).type})),
-							...files[document.uri.path].functions[curFunc].parameters.filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: (v as {type: string}).type}))
+							...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(local) ${(v as {type: string}).type}`})),
+							...files[document.uri.path].functions[curFunc].parameters.filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(param) ${(v as {type: string}).type}`}))
 						]
 						: []
 					   )

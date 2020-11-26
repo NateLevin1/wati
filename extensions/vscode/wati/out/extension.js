@@ -39,11 +39,11 @@ class WatiCompletionProvider {
             else {
                 const curFunc = getCurFunc(document, position);
                 return [
-                    ...Object.values(files[document.uri.path].globals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: v.type })),
+                    ...Object.values(files[document.uri.path].globals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: `(global) ${v.type}` })),
                     ...(!!curFunc ?
                         [
-                            ...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: v.type })),
-                            ...files[document.uri.path].functions[curFunc].parameters.filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: v.type }))
+                            ...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: `(local) ${v.type}` })),
+                            ...files[document.uri.path].functions[curFunc].parameters.filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: `(param) ${v.type}` }))
                         ]
                         : [])
                 ];
