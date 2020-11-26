@@ -9,7 +9,7 @@ function activate(context) {
     console.log('wati is now active.');
     const wati = "wati";
     context.subscriptions.push(vscode.languages.registerHoverProvider(wati, new WatiHoverProvider));
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider("wati", new WatiCompletionProvider, "."));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider("wati", new WatiCompletionProvider, ".", "$"));
     const curDoc = (_a = vscode.window.activeTextEditor) === null || _a === void 0 ? void 0 : _a.document;
     if (curDoc) {
         updateFiles(curDoc);
@@ -26,6 +26,27 @@ class WatiCompletionProvider {
         for (const shouldEndWith in completionItems) {
             if (linePrefix.endsWith(shouldEndWith)) {
                 return completionItems[shouldEndWith];
+            }
+        }
+        if (linePrefix.endsWith("$")) {
+            // show available functions/variables. blocks are unsupported currently
+            updateFiles(document);
+            if (linePrefix.endsWith("call $")) {
+                // show available funcs
+                return Object.values(files[document.uri.path].functions).map(({ name, parameters, returnType }) => makeCompletionItem(name.slice(1), { detail: /**The flatMap makes sure there are only two displayed on each line */ `${parameters.flatMap((p, i) => { let str = `(${p.name} ${p.type}) `; if ((i + 1) % 2 === 0)
+                        return [str, "\n"]; return [str]; }).join("")}${parameters.length > 0 ? "\n\n" : ""}result ${returnType}` }));
+            }
+            else {
+                const curFunc = getCurFunc(document, position);
+                return [
+                    ...Object.values(files[document.uri.path].globals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: v.type })),
+                    ...(!!curFunc ?
+                        [
+                            ...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: v.type })),
+                            ...files[document.uri.path].functions[curFunc].parameters.filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: v.type }))
+                        ]
+                        : [])
+                ];
             }
         }
         return undefined;
@@ -188,6 +209,7 @@ const completionItems = {
     ],
     "s": [
         makeCompletionItem("select", { kind: vscode.CompletionItemKind.Variable }),
+        makeCompletionItem("stack", { kind: vscode.CompletionItemKind.Variable }),
     ],
 };
 // HOVER
@@ -253,25 +275,29 @@ const getParamsOrLocals = /(?: *\((?:(?:param|local) +(?:(\$[0-9A-Za-z!#$%&'*+\-
 const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\(export[^)]+\))*((?:\((?:param | *\$)[^)]+\) *)+)*(?:\(result (i32|i64|f32|f64)\) *)*((?:\(local \$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\) *)+)*/g;
 const getFuncNameFromLine = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 const isLineAFunc = /\(func/;
+const getCurFunc = (document, position) => {
+    var _a;
+    // this is a hacky solution but since it is only used for local vars it works fine
+    let curFunc;
+    let curLineNum = position.line;
+    while (curLineNum > 0) {
+        const curLine = document.lineAt(curLineNum).text;
+        if (isLineAFunc.test(curLine)) {
+            // line is a func
+            curFunc = (_a = curLine.match(getFuncNameFromLine)) === null || _a === void 0 ? void 0 : _a[1];
+            break;
+        }
+        curLineNum -= 1;
+    }
+    return curFunc;
+};
 class WatiHoverProvider {
     provideHover(document, position, token) {
-        var _a;
         updateFiles(document);
-        const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();]+/));
+        const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/));
         const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
         // get the current function
-        // this is a hacky solution but since it is only used for local vars it works fine
-        let curFunc;
-        let curLineNum = position.line;
-        while (curLineNum > 0) {
-            const curLine = document.lineAt(curLineNum).text;
-            if (isLineAFunc.test(curLine)) {
-                // line is a func
-                curFunc = (_a = curLine.match(getFuncNameFromLine)) === null || _a === void 0 ? void 0 : _a[1];
-                break;
-            }
-            curLineNum -= 1;
-        }
+        const curFunc = getCurFunc(document, position);
         // the chars that should never have a hover
         switch (char) {
             case " ":
@@ -305,6 +331,17 @@ class WatiHoverProvider {
                 if (valAtLocal) {
                     const out = new vscode.MarkdownString();
                     out.appendCodeblock(`(local ${valAtLocal.name} ${valAtLocal.type})`, 'wati');
+                    return new vscode.Hover(out);
+                }
+            }
+            // FUNCTION PARAMETER
+            if (curFunc) { // must be in a function for a local var
+                const paramRef = file.functions[curFunc].parameters;
+                const wordIndex = paramRef.findIndex(v => v.name === word);
+                const valAtParam = wordIndex !== -1 ? paramRef[wordIndex] : undefined;
+                if (valAtParam) {
+                    const out = new vscode.MarkdownString();
+                    out.appendCodeblock(`(local ${valAtParam.name} ${valAtParam.type})`, 'wati');
                     return new vscode.Hover(out);
                 }
             }

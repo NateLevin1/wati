@@ -11,6 +11,9 @@ An improved syntax for hand writing WebAssembly text format.
  - Set variables without `.set`: `$a = $b`
  - Make constants without `.const`: `10i32`, `1.5f32`
  - Make parameters without `(param`: `($a i32)`
+### Quality of Life
+ - Auto completion and type information for variables and functions
+ - Auto completion for most instructions
 ### Documentation
  - JSDoc Tags
  - Rich color for @param tags
