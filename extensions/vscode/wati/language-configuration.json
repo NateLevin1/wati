@@ -13,5 +13,9 @@
     "surroundingPairs": [
         ["(", ")"],
         ["\"", "\""]
-    ]
+    ],
+    "indentationRules": {
+        "increaseIndentPattern": "^((?!;;).)*(\\(func .*|loop.*|if.*|block.*)$",
+        "decreaseIndentPattern": "^((?!.*?\/\\*).*\\*\/)?\\s*(?:\\)|end).*$"
+    }
 }
