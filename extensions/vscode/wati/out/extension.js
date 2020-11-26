@@ -9,16 +9,188 @@ function activate(context) {
     console.log('wati is now active.');
     const wati = "wati";
     context.subscriptions.push(vscode.languages.registerHoverProvider(wati, new WatiHoverProvider));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider("wati", new WatiCompletionProvider, "."));
     const curDoc = (_a = vscode.window.activeTextEditor) === null || _a === void 0 ? void 0 : _a.document;
     if (curDoc) {
         updateFiles(curDoc);
     }
-    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(updateFiles));
 }
 exports.activate = activate;
 // this method is called when your extension is deactivated
 function deactivate() { }
 exports.deactivate = deactivate;
+// COMPLETION
+class WatiCompletionProvider {
+    provideCompletionItems(document, position, token, completionContext) {
+        const linePrefix = document.lineAt(position).text.substring(0, position.character);
+        for (const shouldEndWith in completionItems) {
+            if (linePrefix.endsWith(shouldEndWith)) {
+                return completionItems[shouldEndWith];
+            }
+        }
+        return undefined;
+    }
+}
+const makeCompletionItem = (label, options) => {
+    const item = new vscode.CompletionItem(label);
+    for (const optionName in options) {
+        let optionValue = options[optionName];
+        if (optionValue) {
+            // @ts-ignore
+            item[optionName] = optionValue;
+        }
+    }
+    return item;
+};
+const setType = (arr, type) => {
+    return arr.map(v => makeCompletionItem(v.label, { documentation: v.documentation ? new vscode.MarkdownString(v.documentation.replace(/TYPE/g, type)) : undefined, kind: v.kind ? v.kind : vscode.CompletionItemKind.Field }));
+};
+const sharedAllIAllF = [
+    { label: "load", documentation: "Push a value from memory onto the stack at a specified offset.\n```\n($offset i32) ($align i32) (result TYPE)\n```" },
+    { label: "store", documentation: "Store a value into memory at a specified offset.\n```\n($offset i32) ($newValue TYPE)\n```" },
+    { label: "const", documentation: "Create a constant number of the specified type. Easier syntax in wati is Ntype (e.g. '5i32')." },
+];
+const sharedAllI = [
+    { label: "load8_s" },
+    { label: "load8_u" },
+    { label: "load16_s" },
+    { label: "load16_u" },
+    { label: "store8" },
+    { label: "store16" },
+    { label: "clz" },
+    { label: "ctz" },
+    { label: "popcnt" },
+    { label: "add" },
+    { label: "sub" },
+    { label: "mul" },
+    { label: "div_s" },
+    { label: "div_u" },
+    { label: "rem_s" },
+    { label: "rem_u" },
+    { label: "and" },
+    { label: "or" },
+    { label: "xor" },
+    { label: "shl" },
+    { label: "shr_s" },
+    { label: "shr_u" },
+    { label: "rotl" },
+    { label: "rotr" },
+    { label: "eqz" },
+    { label: "eq" },
+    { label: "ne" },
+    { label: "lt_s" },
+    { label: "lt_u" },
+    { label: "gt_s" },
+    { label: "gt_u" },
+    { label: "le_s" },
+    { label: "le_u" },
+    { label: "ge_s" },
+    { label: "ge_u" },
+];
+const sharedAllF = [
+    { label: "abs" },
+    { label: "neg" },
+    { label: "ceil" },
+    { label: "floor" },
+    { label: "trunc" },
+    { label: "nearest" },
+    { label: "sqrt" },
+    { label: "add" },
+    { label: "sub" },
+    { label: "mul" },
+    { label: "div" },
+    { label: "min" },
+    { label: "max" },
+    { label: "copysign" },
+    { label: "eq" },
+    { label: "ne" },
+    { label: "lt" },
+    { label: "gt" },
+    { label: "le" },
+    { label: "ge" },
+];
+const completionItems = {
+    "i32.": [
+        ...setType(sharedAllIAllF, "i32"),
+        ...setType(sharedAllI, "i32"),
+    ],
+    "i64.": [
+        ...setType(sharedAllIAllF, "i64"),
+        ...setType(sharedAllI, "i64"),
+        makeCompletionItem("load32_s", { kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("load32_u", { kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("store32", { kind: vscode.CompletionItemKind.Field }),
+    ],
+    "f32.": [
+        ...setType(sharedAllIAllF, "f32"),
+        ...setType(sharedAllF, "f32"),
+    ],
+    "f64.": [
+        ...setType(sharedAllIAllF, "f64"),
+        ...setType(sharedAllF, "f64"),
+    ],
+    "memory.": [
+        makeCompletionItem("size", { documentation: "Returns the current size, in pages, of a memory.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("grow", { documentation: "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.", kind: vscode.CompletionItemKind.Field }),
+    ],
+    "local.": [
+        makeCompletionItem("get", { documentation: "Get the value of a local variable.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("set", { documentation: "Set the value of a local variable.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("tee", { documentation: "The same as local.set except the argument is returned.", kind: vscode.CompletionItemKind.Field }),
+    ],
+    "global.": [
+        makeCompletionItem("get", { documentation: "Get the value of a global variable.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("set", { documentation: "Set the value of a global variable. Only succeeds if the variable is mutable.", kind: vscode.CompletionItemKind.Field }),
+    ],
+    "i": [
+        makeCompletionItem("i32", { kind: vscode.CompletionItemKind.Variable, commitCharacters: ["."] }),
+        makeCompletionItem("i64", { kind: vscode.CompletionItemKind.Variable, commitCharacters: ["."] }),
+        makeCompletionItem("if", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "f": [
+        makeCompletionItem("f32", { kind: vscode.CompletionItemKind.Variable, commitCharacters: ["."] }),
+        makeCompletionItem("f64", { kind: vscode.CompletionItemKind.Variable, commitCharacters: ["."] }),
+    ],
+    "m": [
+        makeCompletionItem("memory", { kind: vscode.CompletionItemKind.Variable, commitCharacters: ["."] }),
+    ],
+    "g": [
+        makeCompletionItem("global", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "l": [
+        makeCompletionItem("loop", { kind: vscode.CompletionItemKind.Variable }),
+        makeCompletionItem("local", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "b": [
+        makeCompletionItem("block", { kind: vscode.CompletionItemKind.Variable }),
+        makeCompletionItem("br", { kind: vscode.CompletionItemKind.Variable }),
+        makeCompletionItem("br_if", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "e": [
+        makeCompletionItem("else", { kind: vscode.CompletionItemKind.Variable }),
+        makeCompletionItem("end", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "u": [
+        makeCompletionItem("unreachable", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "n": [
+        makeCompletionItem("nop", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "r": [
+        makeCompletionItem("return", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "c": [
+        makeCompletionItem("call", { kind: vscode.CompletionItemKind.Variable }),
+        makeCompletionItem("call_indirect", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "d": [
+        makeCompletionItem("drop", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+    "s": [
+        makeCompletionItem("select", { kind: vscode.CompletionItemKind.Variable }),
+    ],
+};
+// HOVER
 const files = {};
 const getVariablesInFile = (document) => {
     const returned = { globals: {}, functions: {} };
@@ -58,7 +230,6 @@ const getVariablesInFile = (document) => {
 const updateFiles = (document) => {
     if (document.languageId === "wati") {
         files[document.uri.path] = getVariablesInFile(document);
-        console.log(files);
     }
 };
 const getNameType = (m) => {
@@ -85,6 +256,7 @@ const isLineAFunc = /\(func/;
 class WatiHoverProvider {
     provideHover(document, position, token) {
         var _a;
+        updateFiles(document);
         const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();]+/));
         const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
         // get the current function
