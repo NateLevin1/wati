@@ -110,8 +110,8 @@ class WatiCompletionProvider {
             updateFiles(document);
             if (linePrefix.endsWith("call $")) {
                 // show available funcs
-                return Object.values(files[document.uri.path].functions).map(({ name, parameters, returnType }) => makeCompletionItem(name.slice(1), { detail: /**The flatMap makes sure there are only two displayed on each line */ `${parameters.flatMap((p, i) => { let str = `(${p.name} ${p.type}) `; if ((i + 1) % 2 === 0)
-                        return [str, "\n"]; return [str]; }).join("")}${parameters.length > 0 ? "\n\n" : ""}result ${returnType}` }));
+                return Object.values(files[document.uri.path].functions).map(({ name, parameters, returnType }) => makeCompletionItem(name.slice(1), { detail: /**The flatMap makes sure there are only two displayed on each line */ `${parameters.flatMap((p, i) => { let str = `(${p.name ? p.name + " " : ""}${p.type}) `; if ((i + 1) % 2 === 0)
+                        return [str, "\n"]; return [str]; }).join("")}${parameters.length > 0 ? "\n\n" : ""}(result${returnType ? " " + returnType : ""})` }));
             }
             else {
                 const curFunc = getCurFunc(document, position);
@@ -378,7 +378,7 @@ const getCurFunc = (document, position) => {
     return curFunc;
 };
 const getStringFromFuncRef = (func) => {
-    return `(func ${func.name}${func.parameters.length === 0 ? "" : " "}${func.parameters.map((v) => `(${v.name} ${v.type})`).join(" ")})\n(result${func.returnType ? " " + func.returnType : ""})`;
+    return `(func ${func.name}${func.parameters.length === 0 ? "" : " "}${func.parameters.map((v) => `(${v.name ? v.name + " " : ""}${v.type})`).join(" ")})\n(result${func.returnType ? " " + func.returnType : ""})`;
 };
 class WatiHoverProvider {
     provideHover(document, position, token) {
