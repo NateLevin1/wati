@@ -3,22 +3,99 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
 function activate(context) {
-    var _a;
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     console.log('wati is now active.');
     const wati = "wati";
     context.subscriptions.push(vscode.languages.registerHoverProvider(wati, new WatiHoverProvider));
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider("wati", new WatiCompletionProvider, ".", "$"));
-    const curDoc = (_a = vscode.window.activeTextEditor) === null || _a === void 0 ? void 0 : _a.document;
-    if (curDoc) {
-        updateFiles(curDoc);
-    }
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(wati, new WatiCompletionProvider, ".", "$"));
+    context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(wati, new WatiSignatureHelpProvider, '(', ','));
 }
 exports.activate = activate;
 // this method is called when your extension is deactivated
 function deactivate() { }
 exports.deactivate = deactivate;
+// SIGNATURE HELP
+class WatiSignatureHelpProvider {
+    provideSignatureHelp(document, position, token, sigHelpContext) {
+        var _a, _b, _c;
+        if (sigHelpContext.triggerKind === 2) {
+            const sigHelp = (_a = sigHelpContext.activeSignatureHelp) !== null && _a !== void 0 ? _a : new vscode.SignatureHelp;
+            // determine the most recent call so we know what to show
+            const strFromLastCall = getCallAtCursor(document.lineAt(position).text, position.character);
+            // get the name and args of the function and show them
+            const match = strFromLastCall.match(getNameAndParamOfCall);
+            if (match) {
+                // we need to update files so that we know if the func exists
+                updateFiles(document);
+                const [full, name, args] = match;
+                const funcRef = files[document.uri.path].functions[name];
+                if (funcRef) {
+                    const sig = new vscode.SignatureInformation(getStringFromFuncRef(funcRef));
+                    sig.parameters = [...funcRef.parameters.filter(p => !!p.name).map(p => new vscode.ParameterInformation(`(${p.name} ${p.type})`))];
+                    sigHelp.activeParameter = ((_b = args.match(/,/g)) !== null && _b !== void 0 ? _b : []).length;
+                    sigHelp.activeSignature = 0;
+                    sigHelp.signatures = [sig];
+                    return sigHelp;
+                }
+                else {
+                    sigHelp.activeParameter = 0;
+                    sigHelp.activeSignature = 0;
+                    sigHelp.signatures = [new vscode.SignatureInformation("unknown function \"" + name + "\"")];
+                    return sigHelp;
+                }
+            }
+            else {
+                return undefined;
+            }
+        }
+        else {
+            const sigHelp = (_c = sigHelpContext.activeSignatureHelp) !== null && _c !== void 0 ? _c : new vscode.SignatureHelp;
+            return sigHelp;
+        }
+    }
+}
+const getCallAtCursor = (line, cursorPos, previousLine) => {
+    let openParenIndex = line.indexOf("(");
+    if (openParenIndex !== -1) {
+        if (openParenIndex !== -1) {
+            let args = line.slice(openParenIndex + 1);
+            // find close paren index
+            let numOfParens = 1;
+            let curCharIndex = 0;
+            while (numOfParens > 0 && curCharIndex < args.length) {
+                const curChar = args[curCharIndex];
+                if (curChar === "(") {
+                    numOfParens++;
+                }
+                else if (curChar === ")") {
+                    numOfParens--;
+                }
+                curCharIndex++;
+            }
+            // get the absolute location of the end paren
+            let closeParenIndex = curCharIndex + openParenIndex;
+            if (cursorPos > openParenIndex && cursorPos < closeParenIndex + 1) {
+                // cursor is between the opening and closing parens, check for more calls
+                return getCallAtCursor(line.slice(openParenIndex + 1, closeParenIndex), cursorPos - openParenIndex - 1, line);
+            }
+            else {
+                // it isn't between the two, should be the last one or if there is another ( we keep trying
+                const nextOpenParam = line.slice(openParenIndex + 1).indexOf("(");
+                if (nextOpenParam !== -1) {
+                    return getCallAtCursor(line.slice(closeParenIndex + 1), cursorPos - closeParenIndex - 1, previousLine);
+                }
+                else {
+                    return previousLine !== null && previousLine !== void 0 ? previousLine : line;
+                }
+            }
+        }
+    }
+    else {
+        return previousLine !== null && previousLine !== void 0 ? previousLine : line;
+    }
+    return previousLine !== null && previousLine !== void 0 ? previousLine : line;
+};
 // COMPLETION
 class WatiCompletionProvider {
     provideCompletionItems(document, position, token, completionContext) {
@@ -283,6 +360,7 @@ const getParamsOrLocals = /(?: *\((?:(?:param|local) +(?:(\$[0-9A-Za-z!#$%&'*+\-
 const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\(export[^)]+\))*((?:\((?:param | *\$)[^)]+\) *)+)*(?:\(result (i32|i64|f32|f64)\) *)*((?:\(local \$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\) *)+)*/g;
 const getFuncNameFromLine = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 const isLineAFunc = /\(func/;
+const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\((?:[^,\n]*(?:,|\)))*)/;
 const getCurFunc = (document, position) => {
     var _a;
     // this is a hacky solution but since it is only used for local vars it works fine
@@ -298,6 +376,9 @@ const getCurFunc = (document, position) => {
         curLineNum -= 1;
     }
     return curFunc;
+};
+const getStringFromFuncRef = (func) => {
+    return `(func ${func.name}${func.parameters.length === 0 ? "" : " "}${func.parameters.map((v) => `(${v.name} ${v.type})`).join(" ")})\n(result${func.returnType ? " " + func.returnType : ""})`;
 };
 class WatiHoverProvider {
     provideHover(document, position, token) {
@@ -323,7 +404,7 @@ class WatiHoverProvider {
             if (func) {
                 // it is a func
                 const out = new vscode.MarkdownString();
-                out.appendCodeblock(`(func ${func.name}${func.parameters.length === 0 ? "" : " "}${func.parameters.map((v) => `(${v.name} ${v.type})`).join(" ")})\n(result${func.returnType ? " " + func.returnType : ""})`);
+                out.appendCodeblock(getStringFromFuncRef(func));
                 return new vscode.Hover(out);
             }
             // GLOBAL VARIABLE

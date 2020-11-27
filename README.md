@@ -14,6 +14,8 @@ An improved syntax for hand writing WebAssembly text format.
 ### Quality of Life
  - Auto completion and type information for variables and functions
  - Auto completion for most instructions
+ - Docs and type information on hover
+ - See type information on a function when calling it
 ### Documentation
  - JSDoc Tags
  - Rich color for @param tags
