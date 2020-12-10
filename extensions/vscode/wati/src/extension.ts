@@ -21,6 +21,8 @@ export function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
+// TODO: Add easy local syntax: (l$name i32)
+
 // SIGNATURE HELP
 class WatiSignatureHelpProvider implements vscode.SignatureHelpProvider {
 	public provideSignatureHelp(

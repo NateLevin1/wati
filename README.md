@@ -21,3 +21,6 @@ An improved syntax for hand writing WebAssembly text format.
  - Rich color for @param tags
  - Rich color for function-related tags (e.g. @function)
  - Highlighting of @todo
+
+#### Todo
+ - Make locals without `(local`: `(l$a i32)` (-- implemented in compiler, not in extension or highlighting)
