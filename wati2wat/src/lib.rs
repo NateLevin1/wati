@@ -3,8 +3,24 @@ use regex::{Regex, Captures};
 
 const REGEX_ERR: &str = "There was an error creating the regexes.";
 
-pub fn compile(mut file: String) -> String {
+pub fn compile(mut file: String) -> Result<String, String> {
     // This function is really just a series of regexes.
+
+    // TODO: support for nested inline calls. currently breaks and provides an error message
+    let nested_call = Regex::new(r"call \$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*\(.*call \$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*.*\)").expect(REGEX_ERR);
+    let nested = nested_call.find(&file);
+    if nested.is_some() {
+        return Err(String::from(format!("Cannot nest calls to functions inside calls to functions. (near ..{}..)", nested.map_or("", |m| { m.as_str() }) )));
+    }
+
+    // compile inline call
+    let call_regex = Regex::new(r"call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) *\((.*)\)").expect(REGEX_ERR);
+    file = call_regex.replace_all(&file, |caps: &Captures| {
+        let name = &caps[1];
+        let params: Vec<&str> = caps.get(2).map_or("()", |m| { m.as_str() }).split(",").collect();
+        format!("{}\ncall {}", params.join("\n"), name)
+    }).to_string();
+
 
     // match params without (param: ($abc i32)
     let match_params = Regex::new(r"\((?P<var_name>\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?P<var_type>i32|i64|f32|f64)\)").expect(REGEX_ERR);
@@ -19,7 +35,7 @@ pub fn compile(mut file: String) -> String {
     file = match_constants.replace_all(&file, "(${type}.const $num)").to_string();
 
     // match getting without .get: $abc
-    let match_get = Regex::new(r"(\(\w+ )?(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]+)( *=)?").expect(REGEX_ERR);
+    let match_get = Regex::new(r"(\(\w+ |call )?(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]+)( *=)?").expect(REGEX_ERR);
     file = match_get.replace_all(&file, |caps: &Captures| {
         // we need to use this closure so we don't match setting too
 
@@ -45,7 +61,7 @@ pub fn compile(mut file: String) -> String {
         }
     }).to_string();
     
-    file
+    Ok(file)
 }
 
 pub struct Arguments {
