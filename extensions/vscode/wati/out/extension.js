@@ -7,19 +7,28 @@ function activate(context) {
     // This line of code will only be executed once when your extension is activated
     console.log('wati is now active.');
     const wati = "wati";
+    const wat = "wat";
+    // WATI
     context.subscriptions.push(vscode.languages.registerHoverProvider(wati, new WatiHoverProvider));
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(wati, new WatiCompletionProvider, ".", "$"));
     context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(wati, new WatiSignatureHelpProvider, '(', ','));
+    // WAT
+    context.subscriptions.push(vscode.languages.registerHoverProvider(wat, new WatiHoverProvider));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(wat, new WatiCompletionProvider, ".", "$"));
+    context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(wat, new WatiSignatureHelpProvider, '(', ','));
 }
 exports.activate = activate;
 // this method is called when your extension is deactivated
 function deactivate() { }
 exports.deactivate = deactivate;
-// TODO: Add easy local syntax: (l$name i32)
 // SIGNATURE HELP
 class WatiSignatureHelpProvider {
     provideSignatureHelp(document, position, token, sigHelpContext) {
         var _a, _b, _c;
+        // disable if wat and not on in wat
+        if (document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+            return undefined;
+        }
         if (sigHelpContext.triggerKind === 2) {
             const sigHelp = (_a = sigHelpContext.activeSignatureHelp) !== null && _a !== void 0 ? _a : new vscode.SignatureHelp;
             // determine the most recent call so we know what to show
@@ -100,6 +109,10 @@ const getCallAtCursor = (line, cursorPos, previousLine) => {
 // COMPLETION
 class WatiCompletionProvider {
     provideCompletionItems(document, position, token, completionContext) {
+        // disable if wat and not on in wat
+        if (document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+            return undefined;
+        }
         const linePrefix = document.lineAt(position).text.substring(0, position.character);
         for (const shouldEndWith in completionItems) {
             if (linePrefix.endsWith(shouldEndWith)) {
@@ -146,16 +159,16 @@ const setType = (arr, type) => {
 };
 // documentation shared between hovers and completion
 const uniDocs = {
-    "TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```\n($offset i32) ($align i32) (result TYPE)\n```",
-    "TYPE.store": "Store a value into memory at a specified offset.\n```\n($offset i32) ($newValue TYPE)\n```",
-    "TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```\n5i32\n```",
-    "TYPE.add": "Add the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
-    "TYPE.sub": "Subtract the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
-    "TYPE.mul": "Multiply the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
-    "TYPE.eq": "Check if parameter 1 and parameter 2 are equal. Returns true (`1i32`) if they are and false (`0i32`) if they aren't.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
-    "TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
-    "i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n(param TYPE) (result i32)\n```",
-    "i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n(param TYPE) (result i32)\n```",
+    "TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```wati\n($offset i32) ($align i32) (result TYPE)\n```",
+    "TYPE.store": "Store a value into memory at a specified offset.\n```wati\n($offset i32) ($newValue TYPE)\n```",
+    "TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```wati\n5i32\n```",
+    "TYPE.add": "Add the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+    "TYPE.sub": "Subtract the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+    "TYPE.mul": "Multiply the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+    "TYPE.eq": "Check if parameter 1 and parameter 2 are equal. Returns true (`1i32`) if they are and false (`0i32`) if they aren't.\n```wati\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
+    "TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```wati\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
+    "i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```wati\n(param TYPE) (result i32)\n```",
+    "i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```wati\n(param TYPE) (result i32)\n```",
 };
 const sharedAllIAllF = [
     { label: "load", documentation: uniDocs["TYPE.load"] },
@@ -336,7 +349,8 @@ const getVariablesInFile = (document) => {
     return returned;
 };
 const updateFiles = (document) => {
-    if (document.languageId === "wati") {
+    // if is wati or is wat and wat is enabled
+    if (document.languageId === "wati" || (document.languageId === "wat" && vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles)) {
         files[document.uri.path] = getVariablesInFile(document);
     }
 };
@@ -383,6 +397,10 @@ const getStringFromFuncRef = (func) => {
 };
 class WatiHoverProvider {
     provideHover(document, position, token) {
+        // disable if wat and not on in wat
+        if (document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+            return null;
+        }
         updateFiles(document);
         const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/));
         const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));

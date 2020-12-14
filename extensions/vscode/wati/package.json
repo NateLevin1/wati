@@ -10,7 +10,7 @@
         "Programming Languages"
     ],
     "activationEvents": [
-        "onLanguage:wati"
+        "onStartupFinished"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -33,7 +33,17 @@
                 "scopeName": "source.wati",
                 "path": "./syntaxes/wati.json"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "WATI",
+            "properties": {
+                "wati.useIntellisenseInWatFiles": {
+                    "type":"boolean",
+                    "default": false,
+                    "description": "If true, WATI intellisense (hover, completion, signatures) will be used in WAT files."
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",

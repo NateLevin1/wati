@@ -6,7 +6,9 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('wati is now active.');
 
 	const wati: vscode.DocumentSelector = "wati";
+	const wat: vscode.DocumentSelector = "wat";
 
+	// WATI
 	context.subscriptions.push(
 		vscode.languages.registerHoverProvider(wati, new WatiHoverProvider)
 	);
@@ -16,12 +18,20 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.languages.registerSignatureHelpProvider(wati, new WatiSignatureHelpProvider, '(', ',')
 	);
+	// WAT
+	context.subscriptions.push(
+		vscode.languages.registerHoverProvider(wat, new WatiHoverProvider)
+	);
+	context.subscriptions.push(
+		vscode.languages.registerCompletionItemProvider(wat, new WatiCompletionProvider, ".", "$")
+	);
+	context.subscriptions.push(
+		vscode.languages.registerSignatureHelpProvider(wat, new WatiSignatureHelpProvider, '(', ',')
+	);
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
-
-// TODO: Add easy local syntax: (l$name i32)
 
 // SIGNATURE HELP
 class WatiSignatureHelpProvider implements vscode.SignatureHelpProvider {
@@ -31,6 +41,10 @@ class WatiSignatureHelpProvider implements vscode.SignatureHelpProvider {
 		token: vscode.CancellationToken,
 		sigHelpContext: vscode.SignatureHelpContext
 	): vscode.SignatureHelp|undefined {
+		// disable if wat and not on in wat
+		if(document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+			return undefined;
+		}
 		if (sigHelpContext.triggerKind === 2) {
 			const sigHelp = sigHelpContext.activeSignatureHelp ?? new vscode.SignatureHelp;
 
@@ -112,6 +126,10 @@ class WatiCompletionProvider implements vscode.CompletionItemProvider {
 		token: vscode.CancellationToken,
 		completionContext: vscode.CompletionContext
 	): vscode.CompletionItem[]|undefined {
+		// disable if wat and not on in wat
+		if(document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+			return undefined;
+		}
 		const linePrefix = document.lineAt(position).text.substring(0, position.character);
 		for(const shouldEndWith in completionItems) {
 			if(linePrefix.endsWith(shouldEndWith)) {
@@ -171,16 +189,16 @@ interface SharedCompletionItem {
 
 // documentation shared between hovers and completion
 const uniDocs: {[instruction: string]: string} = {
-	"TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```\n($offset i32) ($align i32) (result TYPE)\n```",
-	"TYPE.store": "Store a value into memory at a specified offset.\n```\n($offset i32) ($newValue TYPE)\n```",
-	"TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```\n5i32\n```",
-	"TYPE.add": "Add the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
-	"TYPE.sub": "Subtract the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
-	"TYPE.mul": "Multiply the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
-	"TYPE.eq": "Check if parameter 1 and parameter 2 are equal. Returns true (`1i32`) if they are and false (`0i32`) if they aren't.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
-	"TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
-	"i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n(param TYPE) (result i32)\n```",
-	"i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n(param TYPE) (result i32)\n```",
+	"TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```wati\n($offset i32) ($align i32) (result TYPE)\n```",
+	"TYPE.store": "Store a value into memory at a specified offset.\n```wati\n($offset i32) ($newValue TYPE)\n```",
+	"TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```wati\n5i32\n```",
+	"TYPE.add": "Add the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+	"TYPE.sub": "Subtract the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+	"TYPE.mul": "Multiply the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
+	"TYPE.eq": "Check if parameter 1 and parameter 2 are equal. Returns true (`1i32`) if they are and false (`0i32`) if they aren't.\n```wati\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
+	"TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```wati\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
+	"i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```wati\n(param TYPE) (result i32)\n```",
+	"i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```wati\n(param TYPE) (result i32)\n```",
 	// "TYPE.": "",
 }
 const sharedAllIAllF: SharedCompletionItem[] = [
@@ -365,7 +383,8 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
 	return returned;
 }
 const updateFiles = (document: vscode.TextDocument)=>{
-	if(document.languageId === "wati") {
+	// if is wati or is wat and wat is enabled
+	if(document.languageId === "wati" || (document.languageId === "wat" && vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles)) {
 		files[document.uri.path] = getVariablesInFile(document);
 	}
 }
@@ -418,6 +437,10 @@ class WatiHoverProvider implements vscode.HoverProvider {
 		token: vscode.CancellationToken
 		): vscode.Hover|null
 	{
+		// disable if wat and not on in wat
+		if(document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+			return null;
+		}
 		updateFiles(document);
 
 		const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/));
