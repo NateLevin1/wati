@@ -179,8 +179,8 @@ const uniDocs: {[instruction: string]: string} = {
 	"TYPE.mul": "Multiply the top two values on the stack and return the result.\n```\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
 	"TYPE.eq": "Check if parameter 1 and parameter 2 are equal. Returns true (`1i32`) if they are and false (`0i32`) if they aren't.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
 	"TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
-	"i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n($param TYPE) (result i32)\n```",
-	"i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n($param TYPE) (result i32)\n```",
+	"i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n(param TYPE) (result i32)\n```",
+	"i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```\n(param TYPE) (result i32)\n```",
 	// "TYPE.": "",
 }
 const sharedAllIAllF: SharedCompletionItem[] = [
@@ -385,8 +385,8 @@ const getNameType = (m: RegExpMatchArray)=>{
 	return {name, type}
 }
 const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)/g;
-const getParamsOrLocals = /(?: *\((?:(?:param|local) +(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
-const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\(export[^)]+\))*((?:\((?:param | *\$)[^)]+\) *)+)*(?:\(result (i32|i64|f32|f64)\) *)*((?:\(local \$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\) *)+)*/g;
+const getParamsOrLocals = /(?: *\((?:(?:param +|local +|l)(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
+const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\(export[^)]+\))*((?:\((?:param | *\$)[^)]+\) *)+)*(?:\(result (i32|i64|f32|f64)\) *)*\s*((?:\((?:local |l)\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\)\s*)+)*/g;
 const getFuncNameFromLine = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 const isLineAFunc = /\(func/;
 const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\((?:[^,\n]*(?:,|\)))*)/;
@@ -482,6 +482,18 @@ class WatiHoverProvider implements vscode.HoverProvider {
 			
 			// if nothing else has matched, just be unknown
 			// ? Show red underline?
+			return new vscode.Hover(`\tunknown`);
+		} else if(word.startsWith("l$")) {
+			// local var definition
+			const realVar = word.slice(1);
+			if(curFunc) { // must be in a function for a local var
+				const valAtLocal = file.functions[curFunc].locals[realVar];
+				if(valAtLocal) {
+					const out = new vscode.MarkdownString();
+					out.appendCodeblock(`(local ${valAtLocal.name} ${valAtLocal.type})`, 'wati');
+					return new vscode.Hover(out);
+				}
+			}
 			return new vscode.Hover(`\tunknown`);
 		} else {
 			// might be an instruction or just a random word

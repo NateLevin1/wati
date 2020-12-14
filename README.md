@@ -11,6 +11,7 @@ An improved syntax for hand writing WebAssembly text format.
  - Set variables without `.set`: `$a = $b`
  - Make constants without `.const`: `10i32`, `1.5f32`
  - Make parameters without `(param`: `($a i32)`
+ - Make locals without `(local`: `(l$a i32)`
 ### Quality of Life
  - Auto completion and type information for variables and functions
  - Auto completion for most instructions
@@ -21,6 +22,3 @@ An improved syntax for hand writing WebAssembly text format.
  - Rich color for @param tags
  - Rich color for function-related tags (e.g. @function)
  - Highlighting of @todo
-
-#### Todo
- - Make locals without `(local`: `(l$a i32)` (-- implemented in compiler, not in extension or highlighting)

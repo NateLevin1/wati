@@ -486,6 +486,24 @@
               }
             },
             {
+              "comment":"Make locals with (l$name instruction",
+              "match":"\\((l)(\\$[0-9A-Za-z!#$%&'*+\\-./:<=>?@\\\\^_`|~]*\\b) * ((?:i|f)(?:32|64))",
+              "captures":{
+                "1":{
+                  "comment":"the l part",
+                  "name": "storage.type.wati"
+                },
+                "2": {
+                  "comment":"the variable",
+                  "name":"variable.other.wati"
+                },
+                "3": {
+                  "comment":"the type",
+                  "name":"entity.name.type.wati"
+                }
+              }
+            },
+            {
               "comment": "Call function with params inline",
               "name":"special.call.wati",
               "match":"(call) (\\$[^(\t]+)(\\()(.+)(\\)) *",
