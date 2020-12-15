@@ -1,8 +1,11 @@
-# wati
-**Web Assembly Text Improved!**
-<br>
-An improved syntax for hand writing WebAssembly text format.
+<p align="center">
+<img src="logo.png" align="center" height="110px" width="110px">
+</p>
+<h2 align="center">
+<strong>Web Assembly Text Improved!</strong>
+</h2>
 
+WATI is an improved syntax for hand writing WebAssembly text format.
 
 ## Supported Features
 ### Instructions

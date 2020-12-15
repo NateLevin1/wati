@@ -56,7 +56,7 @@
             {
               "comment": "@param documentation tag",
               "name": "documentation.param.wati",
-              "match": "(@param) +(\\S+) *({\\S+})* *(.*)$",
+              "match": "(@param) +(\\S+) *({ *\\S+ *})* *(.*)$",
               "captures": {
                 "1": {
                   "name": "storage.type.wati"
@@ -72,7 +72,7 @@
             {
               "comment": "Function related documentation tags",
               "name":"documentation.function.wati",
-              "match":"(@(?:function|func|method|depends-on)) ((?:\\S+ *)+)",
+              "match":"(@(?:function|func|method|depends-on)) +((?:\\S+ *)+)",
               "captures": {
                 "1": {
                   "name": "storage.type.wati"
@@ -86,6 +86,19 @@
               "comment": "@todo documentation tag",
               "match": "@todo",
               "name": "invalid.wati"
+            },
+            {
+              "comment":"@result documentation tag",
+              "name": "documentation.result.wati",
+              "match":"(@result) +((?:i|f)(?:32|64)|type)",
+              "captures": {
+                "1": {
+                  "name":"storage.type.wati"
+                },
+                "2": {
+                  "name":"entity.name.type.wati"
+                }
+              }
             },
             {
               "comment": "Other documentation tags",

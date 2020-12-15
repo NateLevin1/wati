@@ -1,8 +1,10 @@
 {
     "name": "wati",
-    "displayName": "wati",
-    "description": "",
-    "version": "0.0.1",
+    "displayName": "WATI",
+    "description": "Syntax highlighting & intellisense for WATI.",
+    "version": "1.0.0",
+    "license": "MIT",
+    "keywords": ["wati", "webassembly", "wasm", "wat", "wati2wat"],
     "engines": {
         "vscode": "^1.51.0"
     },

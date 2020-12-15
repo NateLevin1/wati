@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.languages.registerHoverProvider(wati, new WatiHoverProvider)
 	);
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider(wati, new WatiCompletionProvider, ".", "$")
+		vscode.languages.registerCompletionItemProvider(wati, new WatiCompletionProvider, ".", "$", "@")
 	);
 	context.subscriptions.push(
 		vscode.languages.registerSignatureHelpProvider(wati, new WatiSignatureHelpProvider, '(', ',')
@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.languages.registerHoverProvider(wat, new WatiHoverProvider)
 	);
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider(wat, new WatiCompletionProvider, ".", "$")
+		vscode.languages.registerCompletionItemProvider(wat, new WatiCompletionProvider, ".", "$", "@")
 	);
 	context.subscriptions.push(
 		vscode.languages.registerSignatureHelpProvider(wat, new WatiSignatureHelpProvider, '(', ',')
@@ -199,6 +199,12 @@ const uniDocs: {[instruction: string]: string} = {
 	"TYPE.ne": "Check if parameter 1 and parameter 2 are not equal. Returns true (`1i32`) if they are not equal and false (`0i32`) if they are equal.\n```wati\n($param1 TYPE) ($param2 TYPE) (result i32)\n```",
 	"i32.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```wati\n(param TYPE) (result i32)\n```",
 	"i64.eqz": "Check if parameter 1 is equal to zero. Returns true (`1i32`) if it is equal to zero and false (`0i32`) if it is not.\n```wati\n(param TYPE) (result i32)\n```",
+	"@param": "Identifies the name and type of a parameter along with an optional comment. In the form \n```wati\n(; @param var_name {type} Comment here ;)\n```",
+	"@result": "Identifies the return value of a function's type and optionally a comment about what it is. In the form \n```wati\n(; @result type Comment here ;)\n```",
+	"i32": "The type for a 32 bit integer. Not inherently signed or unsigned, as it is interpreted as such by the operator.",
+	"i64": "The type for a 64 bit integer. Not inherently signed or unsigned, as it is interpreted as such by the operator.",
+	"f32": "The type for a 32 bit floating point number. Single precision as defined by IEEE 754-2019.",
+	"f64": "The type for a 64 bit floating point number. Double precision as defined by IEEE 754-2019.",
 	// "TYPE.": "",
 }
 const sharedAllIAllF: SharedCompletionItem[] = [
@@ -341,6 +347,10 @@ const completionItems: {[key: string]:vscode.CompletionItem[]} = {
 		makeCompletionItem("select", {kind:vscode.CompletionItemKind.Variable }),
 		makeCompletionItem("stack", {kind:vscode.CompletionItemKind.Variable }),
 	],
+	"@": [
+		makeCompletionItem("param", {kind: vscode.CompletionItemKind.Text, documentation: new vscode.MarkdownString(uniDocs["@param"])}),
+		makeCompletionItem("result", {kind: vscode.CompletionItemKind.Text, documentation: new vscode.MarkdownString(uniDocs["@result"])}),
+	]
 }
 
 // HOVER
@@ -526,9 +536,12 @@ class WatiHoverProvider implements vscode.HoverProvider {
 				let doc = uniDocs["TYPE."+capturedWord[2]]; // check if there is a global type
 				doc = !!doc ? doc : uniDocs[`${capturedWord[1]}.${capturedWord[2]}`]; // if there isn't, check if there is a more specific type
 				return new vscode.Hover(`${!!doc ? doc.replace(/TYPE/g, capturedWord[1]) : "No documentation available."}`);
+			} else if(uniDocs[word]) {
+				return new vscode.Hover(uniDocs[word]);
 			}
 		}
-		return new vscode.Hover(`${word}\n\nline: ${position.line}\ncharacter: ${position.character}`);
+		return null;
+		// DEBUG: return new vscode.Hover(`${word}\n\nline: ${position.line}\ncharacter: ${position.character}`);
 	}
 }
 
