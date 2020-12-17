@@ -10,11 +10,13 @@ intellisense for WATI and WAT.
  - Auto completion for most instructions
  - Docs and type information on hover
  - See type information on a function when calling it (signatures)
+
 ### Documentation
  - JSDoc Tags
  - Rich color for @param tags
  - Rich color for function-related tags (e.g. @function)
  - Highlighting of @todo
+
 ### Features of WATI
  - Inline function arguments: `call $fn(1i32, 2i32)`
  - Get variables without `.get`: `$a`
@@ -26,9 +28,12 @@ intellisense for WATI and WAT.
 ## Extension Settings
 - `wati.useIntellisenseInWatFiles`: If true, WATI 
 intellisense (hover, completion, signatures) will be used 
-in WAT files. (Defaults to false)
+in WAT files. (Defaults to true)
 
 ## Release Notes
+### 1.0.1
+Default intellisense use in WAT files to true.
+
 ### 1.0.0
 Initial release.
 

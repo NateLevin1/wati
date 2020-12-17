@@ -2,7 +2,7 @@
     "name": "wati",
     "displayName": "WATI",
     "description": "Syntax highlighting & intellisense for WATI.",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "license": "MIT",
     "icon": "images/icon.png",
     "publisher": "NateLevin",
@@ -43,8 +43,8 @@
             "properties": {
                 "wati.useIntellisenseInWatFiles": {
                     "type":"boolean",
-                    "default": false,
-                    "description": "If true, WATI intellisense (hover, completion, signatures) will be used in WAT files."
+                    "default": true,
+                    "description": "If true, WATI intellisense (hover, completion, signatures) will be used in WAT files. Defaults to true."
                 }
             }
         }
