@@ -35,7 +35,7 @@ pub fn compile(mut file: String) -> Result<String, String> {
     file = match_constants.replace_all(&file, "(${type}.const $num)").to_string();
 
     // match getting without .get: $abc
-    let match_get = Regex::new(r"((?:global|local)\.(?:set|get) |call |\(\w+ )?(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]+)( *=)?").expect(REGEX_ERR);
+    let match_get = Regex::new(r"((?:global|local)\.(?:set|get) |call |call_indirect |br |br_if |br_table |block |loop |if |\(\w+ )?(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]+)( *=)?").expect(REGEX_ERR);
     file = match_get.replace_all(&file, |caps: &Captures| {
         // we need to use this closure so we don't match setting too
 
