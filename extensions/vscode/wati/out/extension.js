@@ -178,7 +178,7 @@ const uniDocs = {
 };
 const sharedAllIAllF = [
     { label: "load", documentation: uniDocs["TYPE.load"] },
-    { label: "store", documentation: uniDocs["TYPE.load"] },
+    { label: "store", documentation: uniDocs["TYPE.store"] },
     { label: "const", documentation: uniDocs["TYPE.const"] },
     { label: "add", documentation: uniDocs["TYPE.add"] },
     { label: "sub", documentation: uniDocs["TYPE.sub"] },
@@ -382,7 +382,7 @@ const getNameType = (m) => {
 };
 const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)/g;
 const getParamsOrLocals = /(?: *\((?:(?:param +|local +|l)(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
-const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\(export[^)]+\))*((?:\((?:param | *\$)[^)]+\) *)+)*(?:\(result (i32|i64|f32|f64)\) *)*\s*((?:\((?:local |l)\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\)\s*)+)*/g;
+const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\s*\(export[^)]+\)(?:\s+;;.+)*)*((?:\s*\((?:param | *\$)[^)]+\)\s*(?:;;.+)*)+)*(?:\s*\(result (i32|i64|f32|f64)\)\s*(?:;;.+)*)*\s*((?:\s*\((?:local |l)\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\)\s*(?:;;.+))+)*/g;
 const getFuncNameFromLine = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 const isLineAFunc = /\(func/;
 const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\((?:[^,\n]*(?:,|\)))*)/;

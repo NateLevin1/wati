@@ -2,7 +2,7 @@
     "name": "wati",
     "displayName": "WATI",
     "description": "Syntax highlighting & intellisense for WATI.",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "license": "MIT",
     "icon": "images/icon.png",
     "publisher": "NateLevin",

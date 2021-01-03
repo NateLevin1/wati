@@ -31,6 +31,9 @@ intellisense (hover, completion, signatures) will be used
 in WAT files. (Defaults to true)
 
 ## Release Notes
+## 1.0.2
+Fix issues regarding hover and signature information with newlines in function definitions
+
 ### 1.0.1
 Default intellisense use in WAT files to true.
 
