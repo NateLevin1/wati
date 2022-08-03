@@ -1,20 +1,30 @@
 {
     "name": "wati",
     "displayName": "WATI",
-    "description": "Syntax highlighting & intellisense for WATI.",
-    "version": "1.0.2",
+    "description": "Intellisense and hover information for the WebAssembly Text Format (.wat)",
+    "version": "1.0.3",
     "license": "MIT",
     "icon": "images/icon.png",
     "publisher": "NateLevin",
-    "keywords": ["wati", "webassembly", "wasm", "wat", "wati2wat"],
+    "keywords": [
+        "wati",
+        "webassembly",
+        "wasm",
+        "wat",
+        "intellisense"
+    ],
     "engines": {
         "vscode": "^1.51.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Other"
     ],
     "activationEvents": [
         "onStartupFinished"
+    ],
+    "extensionDependencies": [
+        "dtsvet.vscode-wasm"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -42,7 +52,7 @@
             "title": "WATI",
             "properties": {
                 "wati.useIntellisenseInWatFiles": {
-                    "type":"boolean",
+                    "type": "boolean",
                     "default": true,
                     "description": "If true, WATI intellisense (hover, completion, signatures) will be used in WAT files. Defaults to true."
                 }

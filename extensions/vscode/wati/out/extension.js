@@ -120,7 +120,7 @@ class WatiCompletionProvider {
             }
         }
         if (linePrefix.endsWith("$")) {
-            // show available functions/variables. blocks are unsupported currently
+            // show available functions/variables.
             updateFiles(document);
             if (linePrefix.endsWith("call $")) {
                 // show available funcs
@@ -129,6 +129,11 @@ class WatiCompletionProvider {
             }
             else {
                 const curFunc = getCurFunc(document, position);
+                if (curFunc && linePrefix.match(/br(?:_if)?\s*\$$/)) {
+                    return [
+                        ...Object.values(files[document.uri.path].functions[curFunc].blocks).map((v) => makeCompletionItem(({ name: v.label }).name.slice(1), { detail: `${v.type} ${v.label} on line ${v.lineNum}` })),
+                    ];
+                }
                 return [
                     ...Object.values(files[document.uri.path].globals).filter(v => !!v.name).map((v) => makeCompletionItem(v.name.slice(1), { detail: `(global) ${v.type}` })),
                     ...(!!curFunc ?
@@ -161,7 +166,7 @@ const setType = (arr, type) => {
 const uniDocs = {
     "TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```wati\n($offset i32) ($align i32) (result TYPE)\n```",
     "TYPE.store": "Store a value into memory at a specified offset.\n```wati\n($offset i32) ($newValue TYPE)\n```",
-    "TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```wati\n5i32\n```",
+    "TYPE.const": "Create a constant number of the specified type.",
     "TYPE.add": "Add the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
     "TYPE.sub": "Subtract the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
     "TYPE.mul": "Multiply the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
@@ -175,6 +180,25 @@ const uniDocs = {
     "i64": "The type for a 64 bit integer. Not inherently signed or unsigned, as it is interpreted as such by the operator.",
     "f32": "The type for a 32 bit floating point number. Single precision as defined by IEEE 754-2019.",
     "f64": "The type for a 64 bit floating point number. Double precision as defined by IEEE 754-2019.",
+    "module": "Declares a new WebAssembly module. Can only be at the top level of the file.\n\nA module may use an identifier to name the module for documentation purposes.\nE.g.\n```wat\n(module $name\n\t;; ...\n)\n```",
+    "import": "Allows for calling of external functions within WebAssembly.\nOften corresponds to JavaScript or a WASI call.\n\nE.g.\n```wat\n(import \"MODULE_NAME\" \"ENTITY_NAME\" (func $identifier (param i32) (result i32)))\n```",
+    "func": "Declares a new function, with an optional name.\n```wat\n(func $function_name (;...params;) (;result;)\n\t;; ...\n)\n```",
+    "global": "Declares a new global variable, with a type, instruction, and an optional name.\n```wat\n(global $name TYPE ((;instr, eg;) i32.const 0)\n```",
+    "data": "Allows for directly adding strings into a module's memory at a specified offset, similar to the .data section in traditional assembly.\n```wat\n(data (i32.const (;offset here;) \"Some string here\")\n```",
+    "param": "Creates a parameter for a function with an optional name.\n```wat\n(param $name TYPE)\n```",
+    "result": "Specifies the result/return value for a function.\nSpecifying more than one type is supported in most implementations, see the [archived multi-value proposal](https://github.com/WebAssembly/multi-value).\n```wat\n(result ...TYPE)\n```",
+    "local": "Declares a local variable with an optional name.\n```wat\n(local $name TYPE)\n```",
+    "local.get": "Gets the value of a local variable, specified by name or index.",
+    "local.set": "Sets the value of a local variable, specified by name or index.",
+    "local.tee": "Sets the value of a local variable, specified by name or index. Like `local.set` but also returns its argument.",
+    "global.get": "Gets the value of a global variable, specified by name or index.",
+    "global.set": "Sets the value of a global variable, specified by name or index. Only succeeds if the variable is mutable.",
+    "drop": "Throw away the first value on the stack",
+    "select": "Selects one of its first two operands based on whether its third operand is zero or not. It may include a value type determining the type of these operands.",
+    "call": "Call a function specified by name or index.",
+    "memory.size": "Returns the current size, in pages, of a memory.",
+    "memory.grow": "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated."
+    // "TYPE.": "",
 };
 const sharedAllIAllF = [
     { label: "load", documentation: uniDocs["TYPE.load"] },
@@ -256,17 +280,17 @@ const completionItems = {
         ...setType(sharedAllF, "f64"),
     ],
     "memory.": [
-        makeCompletionItem("size", { documentation: "Returns the current size, in pages, of a memory.", kind: vscode.CompletionItemKind.Field }),
-        makeCompletionItem("grow", { documentation: "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("size", { documentation: uniDocs["memory.size"], kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("grow", { documentation: uniDocs["memory.grow"], kind: vscode.CompletionItemKind.Field }),
     ],
     "local.": [
-        makeCompletionItem("get", { documentation: "Get the value of a local variable.", kind: vscode.CompletionItemKind.Field }),
-        makeCompletionItem("set", { documentation: "Set the value of a local variable.", kind: vscode.CompletionItemKind.Field }),
-        makeCompletionItem("tee", { documentation: "The same as local.set except the argument is returned.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("get", { documentation: uniDocs["local.get"], kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("set", { documentation: uniDocs["local.set"], kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("tee", { documentation: uniDocs["local.tee"], kind: vscode.CompletionItemKind.Field }),
     ],
     "global.": [
-        makeCompletionItem("get", { documentation: "Get the value of a global variable.", kind: vscode.CompletionItemKind.Field }),
-        makeCompletionItem("set", { documentation: "Set the value of a global variable. Only succeeds if the variable is mutable.", kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("get", { documentation: uniDocs["global.get"], kind: vscode.CompletionItemKind.Field }),
+        makeCompletionItem("set", { documentation: uniDocs["global.set"], kind: vscode.CompletionItemKind.Field }),
     ],
     "i": [
         makeCompletionItem("i32", { kind: vscode.CompletionItemKind.Variable, commitCharacters: ["."] }),
@@ -328,17 +352,33 @@ const getVariablesInFile = (document) => {
     const text = document.getText();
     let globals = [...text.matchAll(getGlobals)];
     globals.forEach((match) => {
-        returned.globals[match[1]] = { type: match[3], isMutable: match[2] === "mut", name: match[1] };
+        returned.globals[match[1]] = {
+            name: match[1],
+            isMutable: match[2] === "mut",
+            type: match[3],
+            initialValue: match[4],
+        };
     });
     let functions = [...text.matchAll(getFunctions)];
     functions.forEach((match) => {
+        var _a;
+        let name = match[1];
         const paramString = match[2];
+        const returnType = match[3];
+        const localString = match[4];
+        if (!name) {
+            // this can happen, so we rely on export name
+            let exportName = (_a = match[0].match(getExport)) === null || _a === void 0 ? void 0 : _a[1];
+            // if there isn't an export, we give up
+            if (!exportName)
+                return;
+            name = "__EXPORTED__" + exportName;
+        }
         let parameters = [];
         if (paramString) {
             const paramMatch = [...paramString.matchAll(getParamsOrLocals)];
             parameters = paramMatch.map(getNameType);
         }
-        const localString = match[4];
         let locals = {};
         if (localString) {
             const localMatch = [...localString.matchAll(getParamsOrLocals)];
@@ -349,13 +389,33 @@ const getVariablesInFile = (document) => {
                 }
             }
         }
-        returned.functions[match[1]] = {
-            name: match[1],
-            returnType: !match[3] ? null : match[3],
+        returned.functions[name] = {
+            name,
+            returnType: !returnType ? null : returnType,
             parameters,
-            locals
+            locals,
+            blocks: {}
         };
     });
+    const lines = text.split(/^/gm);
+    for (var i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const block = line.match(getBlock);
+        if (!block)
+            continue;
+        const [_, blockType, blockLabel] = block;
+        const funcNameOfBlock = getCurFunc(document, { line: i });
+        if (!funcNameOfBlock)
+            continue;
+        const funcOfBlock = returned.functions[funcNameOfBlock];
+        if (!funcOfBlock)
+            continue;
+        funcOfBlock.blocks[blockLabel] = {
+            type: blockType,
+            label: blockLabel,
+            lineNum: i + 1
+        };
+    }
     return returned;
 };
 const updateFiles = (document) => {
@@ -380,22 +440,30 @@ const getNameType = (m) => {
     });
     return { name, type };
 };
-const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)/g;
+const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)(?:\s*\(([^)]+)\))?/g;
 const getParamsOrLocals = /(?: *\((?:(?:param +|local +|l)(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
-const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\s*\(export[^)]+\)(?:\s+;;.+)*)*((?:\s*\((?:param | *\$)[^)]+\)\s*(?:;;.+)*)+)*(?:\s*\(result (i32|i64|f32|f64)\)\s*(?:;;.+)*)*\s*((?:\s*\((?:local |l)\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\)\s*(?:;;.+))+)*/g;
-const getFuncNameFromLine = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
+const getFunctions = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)?(?: |\s*\(export[^)]+?\)(?:\s+;;.+)*)*((?:\s*\((?:param | *\$)[^)]+\)\s*(?:;;.+)*)+)*(?:\s*\(result (i32|i64|f32|f64)\)\s*(?:;;.+)*)*\s*((?:\s*\((?:local\s+|l)(?:\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*\s+)?(?:i32|i64|f32|f64)\)\s*(?:;;.+)?)+)*/g;
+const getFuncNameFromLine = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 const isLineAFunc = /\(func/;
 const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\((?:[^,\n]*(?:,|\)))*)/;
-const getCurFunc = (document, position) => {
-    var _a;
+const getExport = /\(\s*export\s*"([^"]+)"\)/;
+const getBlock = /(?:\s+|^)(block|loop|if)\s*(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
+const getCurFunc = (document, { line: curLineNum }) => {
+    var _a, _b;
     // this is a hacky solution but since it is only used for local vars it works fine
     let curFunc;
-    let curLineNum = position.line;
     while (curLineNum > 0) {
         const curLine = document.lineAt(curLineNum).text;
         if (isLineAFunc.test(curLine)) {
             // line is a func
             curFunc = (_a = curLine.match(getFuncNameFromLine)) === null || _a === void 0 ? void 0 : _a[1];
+            if (!curFunc) {
+                // try to use export
+                const exportName = (_b = curLine.match(getExport)) === null || _b === void 0 ? void 0 : _b[1];
+                if (exportName) {
+                    curFunc = "__EXPORTED__" + exportName;
+                }
+            }
             break;
         }
         curLineNum -= 1;
@@ -412,7 +480,7 @@ class WatiHoverProvider {
             return null;
         }
         updateFiles(document);
-        const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/));
+        const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/)).trim();
         const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
         // get the current function
         const curFunc = getCurFunc(document, position);
@@ -427,7 +495,7 @@ class WatiHoverProvider {
         }
         const file = files[document.uri.path];
         if (word.startsWith("$")) {
-            // it is a global variable, local variable, function or label
+            // it is a global variable, local variable, function or block label
             // FUNCTION
             const func = file.functions[word];
             if (func) {
@@ -441,6 +509,9 @@ class WatiHoverProvider {
             if (valAtGlobal) {
                 const out = new vscode.MarkdownString();
                 out.appendCodeblock(`(global ${valAtGlobal.name} ${valAtGlobal.type}) ${valAtGlobal.isMutable === true ? "(mut)" : ""}`, 'wati');
+                if (valAtGlobal.initialValue) {
+                    out.appendCodeblock("  = " + valAtGlobal.initialValue, "wati");
+                }
                 return new vscode.Hover(out);
             }
             // LOCAL VARIABLE
@@ -453,13 +524,22 @@ class WatiHoverProvider {
                 }
             }
             // FUNCTION PARAMETER
-            if (curFunc) { // must be in a function for a local var
+            if (curFunc) { // must be in a function for a param
                 const paramRef = file.functions[curFunc].parameters;
                 const wordIndex = paramRef.findIndex(v => v.name === word);
                 const valAtParam = wordIndex !== -1 ? paramRef[wordIndex] : undefined;
                 if (valAtParam) {
                     const out = new vscode.MarkdownString();
-                    out.appendCodeblock(`(local ${valAtParam.name} ${valAtParam.type})`, 'wati');
+                    out.appendCodeblock(`(param ${valAtParam.name} ${valAtParam.type})`, 'wati');
+                    return new vscode.Hover(out);
+                }
+            }
+            // BLOCK LABEL
+            if (curFunc) {
+                const block = file.functions[curFunc].blocks[word];
+                if (block) {
+                    const out = new vscode.MarkdownString();
+                    out.appendCodeblock(`${block.type} ${block.label} ;; on line ${block.lineNum}`, 'wati');
                     return new vscode.Hover(out);
                 }
             }

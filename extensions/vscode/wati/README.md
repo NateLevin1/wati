@@ -1,46 +1,59 @@
 # WATI: WebAssembly Text Format Improved!
-WATI is a language extension to WebAssembly Text Format. See all its features [here](https://github.com/UltimatePro-Grammer/wati#readme).
 
-This extension adds WATI language support and
-intellisense for WATI and WAT.
+[![Version](https://vsmarketplacebadge.apphb.com/version/natelevin.wati.svg)](https://marketplace.visualstudio.com/items?itemName=Vallentin.vscode-bnf)
+[![Installs](https://vsmarketplacebadge.apphb.com/installs/natelevin.wati.svg)](https://marketplace.visualstudio.com/items?itemName=Vallentin.vscode-bnf)
+
+WATI provides code completion, intellisense, and hover information for the WebAssembly Text Format (`.wat` files).
+
+![Demo of hover and code completion provided by WATI](https://raw.githubusercontent.com/UltimatePro-Grammer/wati/main/extensions/vscode/wati/demo.gif)
 
 ## Features
+
 ### Quality of Life
- - Auto completion and type information for variables and functions
- - Auto completion for most instructions
- - Docs and type information on hover
- - See type information on a function when calling it (signatures)
+
+-   Auto completion and type information for variables and functions
+-   Auto completion for most instructions
+-   Docs and type information on hover
+-   See type information on a function when calling it (signatures)
 
 ### Documentation
- - JSDoc Tags
- - Rich color for @param tags
- - Rich color for function-related tags (e.g. @function)
- - Highlighting of @todo
 
-### Features of WATI
- - Inline function arguments: `call $fn(1i32, 2i32)`
- - Get variables without `.get`: `$a`
- - Set variables without `.set`: `$a = $b`
- - Make constants without `.const`: `10i32`, `1.5f32`
- - Make parameters without `(param`: `($a i32)`
- - Make locals without `(local`: `(l$a i32)`
+-   JSDoc Tags
+-   Rich color for @param tags
+-   Rich color for function-related tags (e.g. @function)
+-   Highlighting of @todo
 
 ## Extension Settings
-- `wati.useIntellisenseInWatFiles`: If true, WATI 
-intellisense (hover, completion, signatures) will be used 
-in WAT files. (Defaults to true)
+
+-   `wati.useIntellisenseInWatFiles`: If true, WATI
+    intellisense (hover, completion, signatures) will be used
+    in WAT files. (Defaults to true)
+
+> **Note**
+> This extension also adds support for the .wati language. The .wati language is deprecated and is not recommended for use.
 
 ## Release Notes
+
+### 1.0.3
+
+**Greatly improved code comprehension**: Much more accurate variable recognition, display global initial values, completion and hover information for block labels.
+
+Also adds more documentation and deprecate .wati support.
+
 ## 1.0.2
+
 Fix issues regarding hover and signature information with newlines in function definitions
 
 ### 1.0.1
+
 Default intellisense use in WAT files to true.
 
 ### 1.0.0
+
 Initial release.
 
 ## Requirements
-No other extensions are required, though for 
-the WAT intellisense you will need to have the 
+
+No other extensions are required, though for
+the WAT intellisense you will need to have the
 [WebAssembly extension](https://marketplace.visualstudio.com/items?itemName=dtsvet.vscode-wasm).
