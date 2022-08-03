@@ -191,7 +191,7 @@ interface SharedCompletionItem {
 const uniDocs: {[instruction: string]: string} = {
 	"TYPE.load": "Push a value from memory onto the stack at a specified offset.\n```wati\n($offset i32) ($align i32) (result TYPE)\n```",
 	"TYPE.store": "Store a value into memory at a specified offset.\n```wati\n($offset i32) ($newValue TYPE)\n```",
-	"TYPE.const": "Create a constant number of the specified type. Easier syntax in wati is \n```wati\n5i32\n```",
+	"TYPE.const": "Create a constant number of the specified type.",
 	"TYPE.add": "Add the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
 	"TYPE.sub": "Subtract the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
 	"TYPE.mul": "Multiply the top two values on the stack and return the result.\n```wati\n($num1 TYPE) ($num2 TYPE) (result TYPE)\n```",
@@ -205,6 +205,24 @@ const uniDocs: {[instruction: string]: string} = {
 	"i64": "The type for a 64 bit integer. Not inherently signed or unsigned, as it is interpreted as such by the operator.",
 	"f32": "The type for a 32 bit floating point number. Single precision as defined by IEEE 754-2019.",
 	"f64": "The type for a 64 bit floating point number. Double precision as defined by IEEE 754-2019.",
+	"module": "Declares a new WebAssembly module. Can only be at the top level of the file.\n\nA module may use an identifier to name the module for documentation purposes.\nE.g.\n```wat\n(module $name\n\t;; ...\n)\n```",
+	"import": "Allows for calling of external functions within WebAssembly.\nOften corresponds to JavaScript or a WASI call.\n\nE.g.\n```wat\n(import \"MODULE_NAME\" \"ENTITY_NAME\" (func $identifier (param i32) (result i32)))\n```",
+	"func": "Declares a new function, with an optional name.\n```wat\n(func $function_name (;...params;) (;result;)\n\t;; ...\n)\n```",
+	"global": "Declares a new global variable, with a type, instruction, and an optional name.\n```wat\n(global $name TYPE ((;instr, eg;) i32.const 0)\n```",
+	"data": "Allows for directly adding strings into a module's memory at a specified offset, similar to the .data section in traditional assembly.\n```wat\n(data (i32.const (;offset here;) \"Some string here\")\n```",
+	"param": "Creates a parameter for a function with an optional name.\n```wat\n(param $name TYPE)\n```",
+	"result": "Specifies the result/return value for a function.\nSpecifying more than one type is supported in most implementations, see the [archived multi-value proposal](https://github.com/WebAssembly/multi-value).\n```wat\n(result ...TYPE)\n```",
+	"local": "Declares a local variable with an optional name.\n```wat\n(local $name TYPE)\n```",
+	"local.get": "Gets the value of a local variable, specified by name or index.",
+	"local.set": "Sets the value of a local variable, specified by name or index.",
+	"local.tee": "Sets the value of a local variable, specified by name or index. Like `local.set` but also returns its argument.",
+	"global.get": "Gets the value of a global variable, specified by name or index.",
+	"global.set": "Sets the value of a global variable, specified by name or index. Only succeeds if the variable is mutable.",
+	"drop": "Throw away the first value on the stack",
+	"select": "Selects one of its first two operands based on whether its third operand is zero or not. It may include a value type determining the type of these operands.",
+	"call": "Call a function specified by name or index.",
+	"memory.size": "Returns the current size, in pages, of a memory.",
+	"memory.grow": "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated."
 	// "TYPE.": "",
 }
 const sharedAllIAllF: SharedCompletionItem[] = [
@@ -287,17 +305,17 @@ const completionItems: {[key: string]:vscode.CompletionItem[]} = {
 		...setType(sharedAllF, "f64"),
 	],
 	"memory.": [
-		makeCompletionItem("size", { documentation: "Returns the current size, in pages, of a memory.", kind: vscode.CompletionItemKind.Field }),
-		makeCompletionItem("grow", { documentation: "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.", kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("size", { documentation: uniDocs["memory.size"], kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("grow", { documentation: uniDocs["memory.grow"], kind: vscode.CompletionItemKind.Field }),
 	],
 	"local.": [
-		makeCompletionItem("get", { documentation: "Get the value of a local variable.", kind: vscode.CompletionItemKind.Field }),
-		makeCompletionItem("set", { documentation: "Set the value of a local variable.", kind: vscode.CompletionItemKind.Field }),
-		makeCompletionItem("tee", { documentation: "The same as local.set except the argument is returned.", kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("get", { documentation: uniDocs["local.get"], kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("set", { documentation: uniDocs["local.set"], kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("tee", { documentation: uniDocs["local.tee"], kind: vscode.CompletionItemKind.Field }),
 	],
 	"global.": [
-		makeCompletionItem("get", { documentation: "Get the value of a global variable.", kind: vscode.CompletionItemKind.Field }),
-		makeCompletionItem("set", { documentation: "Set the value of a global variable. Only succeeds if the variable is mutable.", kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("get", { documentation: uniDocs["global.get"], kind: vscode.CompletionItemKind.Field }),
+		makeCompletionItem("set", { documentation: uniDocs["global.set"], kind: vscode.CompletionItemKind.Field }),
 	],
 	"i": [
 		makeCompletionItem("i32", {kind:vscode.CompletionItemKind.Variable, commitCharacters:["."]}),
@@ -453,7 +471,7 @@ class WatiHoverProvider implements vscode.HoverProvider {
 		}
 		updateFiles(document);
 
-		const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/));
+		const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/)).trim();
 		const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character+1)));
 
 		// get the current function
