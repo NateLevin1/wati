@@ -378,7 +378,12 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
 	const text = document.getText();
 	let globals = [...text.matchAll(getGlobals)];
 	globals.forEach((match)=>{
-		returned.globals[match[1]] = {type: match[3] as VariableType, isMutable: match[2] === "mut", name:match[1]}
+		returned.globals[match[1]] = {
+			name: match[1],
+			isMutable: match[2] === "mut",
+			type: match[3] as VariableType,
+			initialValue: match[4],
+		};
 	});
 	let functions = [...text.matchAll(getFunctions)];
 	functions.forEach((match)=>{
@@ -443,7 +448,7 @@ const getNameType = (m: RegExpMatchArray)=>{
 	});
 	return {name, type}
 }
-const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)/g;
+const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)(?:\s*\(([^)]+)\))?/g;
 const getParamsOrLocals = /(?: *\((?:(?:param +|local +|l)(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
 const getFunctions = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)?(?: |\s*\(export[^)]+?\)(?:\s+;;.+)*)*((?:\s*\((?:param | *\$)[^)]+\)\s*(?:;;.+)*)+)*(?:\s*\(result (i32|i64|f32|f64)\)\s*(?:;;.+)*)*\s*((?:\s*\((?:local\s+|l)(?:\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*\s+)?(?:i32|i64|f32|f64)\)\s*(?:;;.+)?)+)*/g;
 const getFuncNameFromLine = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
@@ -526,6 +531,9 @@ class WatiHoverProvider implements vscode.HoverProvider {
 			if(valAtGlobal) {
 				const out = new vscode.MarkdownString();
 				out.appendCodeblock(`(global ${valAtGlobal.name} ${valAtGlobal.type}) ${valAtGlobal.isMutable === true ? "(mut)" : ""}`, 'wati');
+				if(valAtGlobal.initialValue) {
+					out.appendCodeblock("  = "+valAtGlobal.initialValue, "wati")
+				}
 				return new vscode.Hover(out);
 			}
 
@@ -540,13 +548,13 @@ class WatiHoverProvider implements vscode.HoverProvider {
 			}
 
 			// FUNCTION PARAMETER
-			if(curFunc) { // must be in a function for a local var
+			if(curFunc) { // must be in a function for a param
 				const paramRef = file.functions[curFunc].parameters;
 				const wordIndex = paramRef.findIndex(v=>v.name === word);
 				const valAtParam = wordIndex !== -1 ? paramRef[wordIndex] : undefined;
 				if(valAtParam) {
 					const out = new vscode.MarkdownString();
-					out.appendCodeblock(`(local ${valAtParam.name} ${valAtParam.type})`, 'wati');
+					out.appendCodeblock(`(param ${valAtParam.name} ${valAtParam.type})`, 'wati');
 					return new vscode.Hover(out);
 				}
 			}
@@ -606,5 +614,6 @@ interface Variable {
 	type: VariableType
 	isMutable?: boolean
 	name: string|undefined // includes the $, is undefined if no name (just indexed)
+	initialValue?: string
 }
 type VariableType = "i32"|"i64"|"f32"|"f64"|"unknown"|null;
