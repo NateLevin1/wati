@@ -137,13 +137,18 @@ class WatiCompletionProvider implements vscode.CompletionItemProvider {
 			}
 		}
 		if (linePrefix.endsWith("$")) {
-			// show available functions/variables. blocks are unsupported currently
+			// show available functions/variables.
 			updateFiles(document);
 			if (linePrefix.endsWith("call $")) {
 				// show available funcs
 				return Object.values(files[document.uri.path].functions).map(({name, parameters, returnType})=>makeCompletionItem(name.slice(1), {detail: /**The flatMap makes sure there are only two displayed on each line */`${parameters.flatMap((p, i)=>{let str = `(${p.name ? p.name+" " : ""}${p.type}) `; if((i + 1) % 2 === 0) return [str, "\n"]; return [str]}).join("")}${parameters.length > 0 ? "\n\n" : ""}(result${returnType ? " "+returnType : ""})`}))
 			} else {
 				const curFunc = getCurFunc(document, position);
+				if(curFunc && linePrefix.match(/br(?:_if)?\s*\$$/)) {
+					return [
+						...Object.values(files[document.uri.path].functions[curFunc].blocks).map((v)=>makeCompletionItem(({name: v.label}).name.slice(1), {detail: `${v.type} ${v.label} on line ${v.lineNum}`})),
+					];
+				}
 				return [
 					...Object.values(files[document.uri.path].globals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(global) ${(v as {type: string}).type}`})), 
 					...(!!curFunc ?
@@ -422,9 +427,26 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
 			name,
 			returnType: !returnType ? null : returnType as VariableType,
 			parameters,
-			locals
+			locals,
+			blocks: {}
 		};
 	});
+	const lines = text.split(/^/gm);
+	for(var i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const block = line.match(getBlock);
+		if(!block) continue;
+		const [_, blockType, blockLabel] = block;
+		const funcNameOfBlock = getCurFunc(document, { line: i });
+		if(!funcNameOfBlock) continue;
+		const funcOfBlock = returned.functions[funcNameOfBlock];
+		if(!funcOfBlock) continue;
+		funcOfBlock.blocks[blockLabel] = {
+			type: blockType,
+			label: blockLabel,
+			lineNum: i+1
+		};
+	}
 	return returned;
 }
 const updateFiles = (document: vscode.TextDocument)=>{
@@ -455,11 +477,11 @@ const getFuncNameFromLine = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za
 const isLineAFunc = /\(func/;
 const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\((?:[^,\n]*(?:,|\)))*)/;
 const getExport = /\(\s*export\s*"([^"]+)"\)/;
+const getBlock = /(?:\s+|^)(block|loop|if)\s*(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 
-const getCurFunc = (document: vscode.TextDocument, position: vscode.Position)=>{
+const getCurFunc = (document: vscode.TextDocument, {line: curLineNum}: {line: number})=>{
 	// this is a hacky solution but since it is only used for local vars it works fine
 	let curFunc: string | undefined;
-	let curLineNum = position.line;
 	while (curLineNum > 0) {
 		const curLine = document.lineAt(curLineNum).text;
 		if (isLineAFunc.test(curLine)) {
@@ -515,7 +537,7 @@ class WatiHoverProvider implements vscode.HoverProvider {
 		const file = files[document.uri.path];
 
 		if(word.startsWith("$")) {
-			// it is a global variable, local variable, function or label
+			// it is a global variable, local variable, function or block label
 
 			// FUNCTION
 			const func = file.functions[word];
@@ -555,6 +577,16 @@ class WatiHoverProvider implements vscode.HoverProvider {
 				if(valAtParam) {
 					const out = new vscode.MarkdownString();
 					out.appendCodeblock(`(param ${valAtParam.name} ${valAtParam.type})`, 'wati');
+					return new vscode.Hover(out);
+				}
+			}
+
+			// BLOCK LABEL
+			if(curFunc) {
+				const block = file.functions[curFunc].blocks[word];
+				if(block) {
+					const out = new vscode.MarkdownString();
+					out.appendCodeblock(`${block.type} ${block.label} ;; on line ${block.lineNum}`, 'wati');
 					return new vscode.Hover(out);
 				}
 			}
@@ -605,6 +637,7 @@ interface FunctionDescriptor {
 	parameters: Variable[]
 	returnType: VariableType
 	locals: VariableByName
+	blocks: BlockByName
 }
 interface VariableByName {
 	// includes the $
@@ -617,3 +650,12 @@ interface Variable {
 	initialValue?: string
 }
 type VariableType = "i32"|"i64"|"f32"|"f64"|"unknown"|null;
+interface Block {
+	type: string
+	label: string // only blocks with labels are stored
+	lineNum: number
+}
+interface BlockByName {
+	// includes the $
+	[key: string]: Block
+}
