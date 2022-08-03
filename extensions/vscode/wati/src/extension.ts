@@ -382,14 +382,26 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
 	});
 	let functions = [...text.matchAll(getFunctions)];
 	functions.forEach((match)=>{
+		let name = match[1];
 		const paramString = match[2];
+		const returnType = match[3];
+		const localString = match[4];
+
+		if(!name) {
+			// this can happen, so we rely on export name
+			let exportName = match[0].match(getExport)?.[1];
+			// if there isn't an export, we give up
+			if(!exportName) return;
+
+			name = "__EXPORTED__"+exportName;
+		}
+
 		let parameters: Variable[] = [];
 		if (paramString) {
 			const paramMatch = [...paramString.matchAll(getParamsOrLocals)];
 			parameters = paramMatch.map(getNameType);
 		}
 
-		const localString = match[4];
 		let locals: VariableByName = {};
 		if (localString) {
 			const localMatch = [...localString.matchAll(getParamsOrLocals)];
@@ -401,9 +413,9 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
 			}
 		}
 
-		returned.functions[match[1]] = {
-			name: match[1],
-			returnType: !match[3] ? null : match[3] as VariableType,
+		returned.functions[name] = {
+			name,
+			returnType: !returnType ? null : returnType as VariableType,
 			parameters,
 			locals
 		};
@@ -433,10 +445,11 @@ const getNameType = (m: RegExpMatchArray)=>{
 }
 const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)/g;
 const getParamsOrLocals = /(?: *\((?:(?:param +|local +|l)(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
-const getFunctions = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(?: |\s*\(export[^)]+\)(?:\s+;;.+)*)*((?:\s*\((?:param | *\$)[^)]+\)\s*(?:;;.+)*)+)*(?:\s*\(result (i32|i64|f32|f64)\)\s*(?:;;.+)*)*\s*((?:\s*\((?:local |l)\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]* (?:i32|i64|f32|f64)\)\s*(?:;;.+))+)*/g;
-const getFuncNameFromLine = /\((?:func)[^$]+(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
+const getFunctions = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)?(?: |\s*\(export[^)]+?\)(?:\s+;;.+)*)*((?:\s*\((?:param | *\$)[^)]+\)\s*(?:;;.+)*)+)*(?:\s*\(result (i32|i64|f32|f64)\)\s*(?:;;.+)*)*\s*((?:\s*\((?:local\s+|l)(?:\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*\s+)?(?:i32|i64|f32|f64)\)\s*(?:;;.+)?)+)*/g;
+const getFuncNameFromLine = /\((?:\s*func)(?:\s*(?:\(.*?\)\s*)*?|\s*)(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 const isLineAFunc = /\(func/;
 const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\((?:[^,\n]*(?:,|\)))*)/;
+const getExport = /\(\s*export\s*"([^"]+)"\)/;
 
 const getCurFunc = (document: vscode.TextDocument, position: vscode.Position)=>{
 	// this is a hacky solution but since it is only used for local vars it works fine
@@ -447,6 +460,13 @@ const getCurFunc = (document: vscode.TextDocument, position: vscode.Position)=>{
 		if (isLineAFunc.test(curLine)) {
 			// line is a func
 			curFunc = curLine.match(getFuncNameFromLine)?.[1];
+			if(!curFunc) {
+				// try to use export
+				const exportName = curLine.match(getExport)?.[1];
+				if(exportName) {
+					curFunc = "__EXPORTED__"+exportName;
+				}
+			}
 			break;
 		}
 		curLineNum -= 1;
