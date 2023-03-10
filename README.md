@@ -6,7 +6,7 @@
 </h1>
 
 <p align="center">
-WATI provides code completion, intellisense, and hover information for the WebAssembly Text Format (<code>.wat</code> files).
+WATI provides code completion, intellisense, and hover information<br/>for the WebAssembly Text Format (<code>.wat</code> files).
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@ WATI provides code completion, intellisense, and hover information for the WebAs
 </p>
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/UltimatePro-Grammer/wati/main/extensions/vscode/wati/demo.gif" alt="Demo of hover and code completion provided by WATI">
+<img src="https://raw.githubusercontent.com/UltimatePro-Grammer/wati/main/extension/demo.gif" alt="Demo of hover and code completion provided by WATI">
 </p>
 
 ## Features
