@@ -1,7 +1,7 @@
 # WATI: WebAssembly Text Format Improved!
 
-[![Version](https://vsmarketplacebadge.apphb.com/version/natelevin.wati.svg)](https://marketplace.visualstudio.com/items?itemName=Vallentin.vscode-bnf)
-[![Installs](https://vsmarketplacebadge.apphb.com/installs/natelevin.wati.svg)](https://marketplace.visualstudio.com/items?itemName=Vallentin.vscode-bnf)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/natelevin.wati?label=Version%3A)](https://marketplace.visualstudio.com/items?itemName=natelevin.wati)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/natelevin.wati?label=Installs%3A)](https://marketplace.visualstudio.com/items?itemName=natelevin.wati)
 
 WATI provides code completion, intellisense, and hover information for the WebAssembly Text Format (`.wat` files).
 
@@ -15,6 +15,10 @@ WATI provides code completion, intellisense, and hover information for the WebAs
 -   Auto completion for most instructions
 -   Docs and type information on hover
 -   See type information on a function when calling it (signatures)
+-   Magical emmet-like completions:
+    -   Easily create constants: `5i32` -> `(i32.const 5)`, `30.12f64` -> `(f64.const 30.12)`, `100_000i64` -> `(i64.const 100000)`
+    -   Access local and global variables easily, with autocompletion: `l$someLocal` -> `(local.get $someLocal)`, `g$someGlobal` -> `(global.get $someGlobal)`
+    -   Set local and global variables with autocompletion: `l=$someLocal` -> `(local.set $someLocal |)`, `g=$someGlobal` -> `(global.set $someGlobal |)`
 
 ### Documentation
 
@@ -33,6 +37,10 @@ WATI provides code completion, intellisense, and hover information for the WebAs
 > This extension also adds support for the .wati language. The .wati language is deprecated and is not recommended for use.
 
 ## Release Notes
+
+### 1.1.4
+
+New emmet-like WAT completions are now available. These new completions allow you to quickly write WAT code with fewer keystrokes!
 
 ### 1.0.3
 
@@ -54,6 +62,5 @@ Initial release.
 
 ## Requirements
 
-No other extensions are required, though for
-the WAT intellisense you will need to have the
+No other extensions are required, though for the WAT intellisense you will need to have the
 [WebAssembly extension](https://marketplace.visualstudio.com/items?itemName=dtsvet.vscode-wasm).

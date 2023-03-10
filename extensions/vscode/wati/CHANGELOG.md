@@ -2,6 +2,12 @@
 
 All notable changes to the "wati" extension will be documented in this file.
 
+## 1.1.4
+
+### Changes
+
+-   New emmet-like WAT completions are now available. These new completions allow you to quickly write WAT code with fewer keystrokes!
+
 ## 1.0.3
 
 ### Changes

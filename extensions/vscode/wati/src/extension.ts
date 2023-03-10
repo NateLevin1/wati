@@ -13,7 +13,10 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.languages.registerHoverProvider(wati, new WatiHoverProvider)
 	);
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider(wati, new WatiCompletionProvider, ".", "$", "@")
+		vscode.languages.registerCompletionItemProvider(wati, new WatiVariableCompletionProvider, ".", "$", "@")
+	);
+	context.subscriptions.push(
+		vscode.languages.registerCompletionItemProvider(wati, new WatiSyntaxCompletionProvider, ...WatiSyntaxCompletionProvider.triggerCharacters)
 	);
 	context.subscriptions.push(
 		vscode.languages.registerSignatureHelpProvider(wati, new WatiSignatureHelpProvider, '(', ',')
@@ -23,7 +26,10 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.languages.registerHoverProvider(wat, new WatiHoverProvider)
 	);
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider(wat, new WatiCompletionProvider, ".", "$", "@")
+		vscode.languages.registerCompletionItemProvider(wat, new WatiVariableCompletionProvider, ".", "$", "@")
+	);
+	context.subscriptions.push(
+		vscode.languages.registerCompletionItemProvider(wat, new WatiSyntaxCompletionProvider, ...WatiSyntaxCompletionProvider.triggerCharacters)
 	);
 	context.subscriptions.push(
 		vscode.languages.registerSignatureHelpProvider(wat, new WatiSignatureHelpProvider, '(', ',')
@@ -119,7 +125,20 @@ const getCallAtCursor = (line: string, cursorPos: number, previousLine?: string)
 }
 
 // COMPLETION
-class WatiCompletionProvider implements vscode.CompletionItemProvider {
+const mapVariables = ({prefix, wasmInstr, variables, position, wasmAfterVar, command }: {prefix: string, wasmInstr: string, variables: vscode.CompletionItem[], position: vscode.Position, wasmAfterVar?: string, command?: vscode.Command })=>{
+	return variables.map((completionItem)=>{
+		const varName = completionItem.label;
+		const fullTypedText = prefix + "$" + varName;
+		const textToInsert = `(${wasmInstr} $${varName}${wasmAfterVar ?? ""})`;
+		return makeCompletionItem(fullTypedText, {
+			range: new vscode.Range(position.with(undefined, position.character - prefix.length - 1), position),
+			insertText: textToInsert,
+			documentation: new vscode.MarkdownString(completionItem.detail + "\n```wasm\n"+ textToInsert +"\n```"),
+			command: command,
+		});
+	});
+}
+class WatiVariableCompletionProvider implements vscode.CompletionItemProvider {
 	public provideCompletionItems(
 		document: vscode.TextDocument,
 		position: vscode.Position,
@@ -139,49 +158,91 @@ class WatiCompletionProvider implements vscode.CompletionItemProvider {
 		if (linePrefix.endsWith("$")) {
 			// show available functions/variables.
 			updateFiles(document);
+
 			if (linePrefix.endsWith("call $")) {
 				// show available funcs
-				return Object.values(files[document.uri.path].functions).map(({name, parameters, returnType})=>makeCompletionItem(name.slice(1), {detail: /**The flatMap makes sure there are only two displayed on each line */`${parameters.flatMap((p, i)=>{let str = `(${p.name ? p.name+" " : ""}${p.type}) `; if((i + 1) % 2 === 0) return [str, "\n"]; return [str]}).join("")}${parameters.length > 0 ? "\n\n" : ""}(result${returnType ? " "+returnType : ""})`}))
-			} else {
-				const curFunc = getCurFunc(document, position);
-				if(curFunc && linePrefix.match(/br(?:_if)?\s*\$$/)) {
-					return [
-						...Object.values(files[document.uri.path].functions[curFunc].blocks).map((v)=>makeCompletionItem(({name: v.label}).name.slice(1), {detail: `${v.type} ${v.label} on line ${v.lineNum}`})),
-					];
-				}
+				return Object.values(files[document.uri.path].functions).filter((value)=>!value.name.startsWith("__WATI_EXPORTED__")).map(({name, parameters, returnType})=>makeCompletionItem(name.slice(1), {detail: /**The flatMap makes sure there are only two displayed on each line */`${parameters.flatMap((p, i)=>{let str = `(${p.name ? p.name+" " : ""}${p.type}) `; if((i + 1) % 2 === 0) return [str, "\n"]; return [str]}).join("")}${parameters.length > 0 ? "\n\n" : ""}(result${returnType ? " "+returnType : ""})`}))
+			}
+
+			const curFunc = getCurFunc(document, position);
+
+			const isBranch = linePrefix.match(/br(?:_if)?\s*\$$/);
+			if(curFunc && isBranch) {
 				return [
-					...Object.values(files[document.uri.path].globals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(global) ${(v as {type: string}).type}`})), 
-					...(!!curFunc ?
-						[
-							...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(local) ${(v as {type: string}).type}`})),
-							...files[document.uri.path].functions[curFunc].parameters.filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(param) ${(v as {type: string}).type}`}))
-						]
-						: []
-					   )
+					...Object.values(files[document.uri.path].functions[curFunc].blocks).map((v)=>makeCompletionItem(({name: v.label}).name.slice(1), {detail: `${v.type} ${v.label} on line ${v.lineNum}`})),
 				];
 			}
+
+			const isLocalVar = linePrefix.endsWith("l$");
+			const localVariables = !!curFunc
+				? [
+					...Object.values(files[document.uri.path].functions[curFunc].locals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(local) ${v.type}`})),
+					...files[document.uri.path].functions[curFunc].parameters.filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(param) ${v.type}`}))
+					]
+				: [];
+
+			if(isLocalVar) {
+				return mapVariables({prefix: "l", wasmInstr: "local.get", variables: localVariables, position});
+			}
+
+			const isSettingLocalVar = linePrefix.endsWith("l=$");
+			if(isSettingLocalVar) {
+				return mapVariables({
+					prefix: "l=",
+					wasmInstr: "local.set",
+					variables: localVariables,
+					position,
+					wasmAfterVar: " ",
+					command: {
+						command: "cursorMove",
+						title: "Cursor Move",
+						arguments: [{ to: "left" }],
+					}
+				});
+			}
+
+			const isGlobalVar = linePrefix.endsWith("g$");
+			const globalVariables = Object.values(files[document.uri.path].globals).filter(v=>!!v.name).map((v)=>makeCompletionItem((v as {name: string}).name.slice(1), {detail: `(global) ${v.type}`}));
+
+			if(isGlobalVar) {
+				return mapVariables({prefix: "g", wasmInstr: "global.get", variables: globalVariables, position});
+			}
+
+			const isSettingGlobalVar = linePrefix.endsWith("g=$");
+			if(isSettingGlobalVar) {
+				return mapVariables({
+					prefix: "g=",
+					wasmInstr: "global.set",
+					variables: globalVariables,
+					position,
+					wasmAfterVar: " ",
+					command: {
+						command: "cursorMove",
+						title: "Cursor Move",
+						arguments: [{ to: "left" }],
+					}
+				});
+			}
+
+			return [
+				...globalVariables,
+				...localVariables
+			];
 		}
 		return undefined;
 	}
 }
-const makeCompletionItem = (label: string, options?: CompletionItemOptions)=>{
+const makeCompletionItem = (label: string, options?: Partial<vscode.CompletionItem>)=>{
 	const item = new vscode.CompletionItem(label);
 	for(const optionName in options) {
+		// @ts-ignore
 		let optionValue = options[optionName];
 		if(optionValue) {
 			// @ts-ignore
 			item[optionName] = optionValue;
 		}
-		
 	}
 	return item;
-}
-interface CompletionItemOptions {
-	[key: string]: unknown
-	kind?: vscode.CompletionItemKind
-	commitCharacters?: string[]
-	documentation?: vscode.MarkdownString | string
-	detail?: string
 }
 const setType = (arr: SharedCompletionItem[], type: "i32"|"i64"|"f32"|"f64")=>{
 	return arr.map(v=>makeCompletionItem(v.label, {documentation: v.documentation ? new vscode.MarkdownString(v.documentation.replace(/TYPE/g, type)) : undefined, kind: v.kind ? v.kind : vscode.CompletionItemKind.Field}))
@@ -376,6 +437,31 @@ const completionItems: {[key: string]:vscode.CompletionItem[]} = {
 	]
 }
 
+class WatiSyntaxCompletionProvider implements vscode.CompletionItemProvider {
+	public static triggerCharacters = ["2", "4", "$"];
+	public provideCompletionItems(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+		completionContext: vscode.CompletionContext
+	): vscode.CompletionItem[]|undefined {
+		// disable if wat and not on in wat
+		if(document.languageId === "wat" && !vscode.workspace.getConfiguration('wati').useIntellisenseInWatFiles) {
+			return undefined;
+		}
+
+		const linePrefix = document.lineAt(position).text.substring(0, position.character);
+
+		// match & convert number constants - e.g. 5i32, 5.11f64, 500_000_000i64
+		const numberConstantMatch = linePrefix.match(/([\d|.|_]+)((?:i|f)(?:32|64))$/);
+		if(numberConstantMatch) {
+			const [fullMatch, number, type] = numberConstantMatch;
+			const textToInsert = `(${type}.const ${number.replace(/_/g, "")})`;
+			return [makeCompletionItem(fullMatch, {insertText: textToInsert, detail: "insert: "+textToInsert })];
+		}
+	}
+}
+
 // HOVER
 const files: IFileVariables = {};
 const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
@@ -403,7 +489,7 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile=>{
 			// if there isn't an export, we give up
 			if(!exportName) return;
 
-			name = "__EXPORTED__"+exportName;
+			name = "__WATI_EXPORTED__"+exportName;
 		}
 
 		let parameters: Variable[] = [];
@@ -491,7 +577,7 @@ const getCurFunc = (document: vscode.TextDocument, {line: curLineNum}: {line: nu
 				// try to use export
 				const exportName = curLine.match(getExport)?.[1];
 				if(exportName) {
-					curFunc = "__EXPORTED__"+exportName;
+					curFunc = "__WATI_EXPORTED__"+exportName;
 				}
 			}
 			break;
