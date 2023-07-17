@@ -17,7 +17,7 @@ WATI provides code completion, intellisense, and hover information<br/>for the W
 </p>
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/UltimatePro-Grammer/wati/main/extension/demo.gif" alt="Demo of hover and code completion provided by WATI">
+<img src="https://raw.githubusercontent.com/NateLevin1/wati/main/extension/demo.gif" alt="Demo of hover and code completion provided by WATI">
 </p>
 
 ## Features

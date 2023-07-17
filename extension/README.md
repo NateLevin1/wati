@@ -5,7 +5,7 @@
 
 WATI provides code completion, intellisense, and hover information for the WebAssembly Text Format (`.wat` files).
 
-![Demo of hover and code completion provided by WATI](https://raw.githubusercontent.com/UltimatePro-Grammer/wati/main/extension/demo.gif)
+![Demo of hover and code completion provided by WATI](https://raw.githubusercontent.com/NateLevin1/wati/main/extension/demo.gif)
 
 ## Features
 
