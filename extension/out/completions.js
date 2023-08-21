@@ -46,6 +46,18 @@ exports.instructionDocs = {
     f64: "The type for a 64 bit floating point number. Double precision as defined by IEEE 754-2019.",
     module: "Declares a new WebAssembly module. Can only be at the top level of the file.\n\nA module may use an identifier to name the module for documentation purposes.\nE.g.\n```wat\n(module $name\n\t;; ...\n)\n```",
     import: 'Allows for calling of external functions within WebAssembly.\nOften corresponds to JavaScript or a WASI call.\n\nE.g.\n```wat\n(import "MODULE_NAME" "ENTITY_NAME" (func $identifier (param i32) (result i32)))\n```',
+    export: [
+        "Export a value for use in the host environment. Syntax:",
+        "```wat\n(export \"exportName\" (; some value ;))\n```",
+        "Examples:",
+        "```wat",
+        "(export \"mem\" (memory 0))",
+        "(export \"getNum\" (func $get_num))",
+        "(func $double_num (export \"doubleNum\") (param i32) ;; inline-export",
+        "\t;; ...",
+        ")",
+        "\n```"
+    ].join('\n'),
     func: "Declares a new function, with an optional name.\n```wat\n(func $function_name (;...params;) (;result;)\n\t;; ...\n)\n```",
     global: "Declares a new global variable, with a type, instruction, and an optional name.\n```wat\n(global $name TYPE ((;instr, eg;) i32.const 0)\n```",
     table: [
@@ -93,7 +105,8 @@ exports.instructionDocs = {
     "ref.func": "Gets a reference for a function. Syntax:\n```wat\n(ref.func $func_id)\n```",
     "ref.null": "Gets a null reference for a function or extern. Syntax:\n```wat\n(ref.null func) ;; empty ref for func type\n(ref.null extern) ;; empty ref for extern type\n```",
     "ref.is_null": "Checks if a reference is empty. Syntax:\n```wat\n(ref.null $ref_id)\n```",
-    data: 'Allows for directly adding strings into a module\'s memory at a specified offset, similar to the .data section in traditional assembly.\n```wat\n(data (i32.const (;offset here;) "Some string here")\n```',
+    data: 'Allows for directly adding strings into a module\'s memory at a specified offset, similar to the .data section in traditional assembly.\n```wat\n(data (i32.const (;offset here;)) "Some string here")\n```',
+    memory: "Requests a block of memory. Syntax:\n```wat\n(memory MIN_SIZE [MAX_SIZE])\n```",
     param: "Creates a parameter for a function with an optional name.\n```wat\n(param $name TYPE)\n```",
     result: "Specifies the result/return value for a function.\nSpecifying more than one type is supported in most implementations, see the [archived multi-value proposal](https://github.com/WebAssembly/multi-value).\n```wat\n(result ...TYPE)\n```",
     local: "Declares a local variable with an optional name.\n```wat\n(local $name TYPE)\n```",
@@ -107,6 +120,45 @@ exports.instructionDocs = {
     call: "Call a function specified by name or index.",
     "memory.size": "Returns the current size, in pages, of a memory.",
     "memory.grow": "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.",
+    loop: [
+        "Define a block with a label at the **start**. Syntax:",
+        "```wat\n(loop $loop_id \n\t;; ...\n)\n```"
+    ].join('\n'),
+    block: [
+        "Define a block with a label at the **end**. Syntax:",
+        "```wat\n(block $block_id \n\t;; ...\n)\n```"
+    ].join('\n'),
+    if: [
+        "Execute code blocks depending on whether a stack value is 0. Syntax:",
+        "```wat",
+        "(if (; add type here if block returns a value ;)",
+        "  (; some code that returns an i32 ;)",
+        "  (then (; code to execute if non-zero ;))",
+        "  (else (; code to execute if zero ;))",
+        ")",
+        "```",
+        "If not using the folded form, it can be written like this:",
+        "```wat",
+        "(; conditional value placed on stack ;)",
+        "if",
+        "  ;; code to execute if non-zero",
+        "else",
+        "  ;; code to execute if zero",
+        "end",
+        "```",
+    ].join('\n'),
+    then: "Defines a block to execute if conditional is non-zero.",
+    else: "Defines a block to execute if conditional is zero.",
+    br: "Branch instruction. Jumps to $label_id. Syntax: \n```wat\n(br $label_id)\n```",
+    br_if: "Conditional branch instruction. Jumps to $label_id if conditional value is non-zero. Syntax: \n```wat\n(br_if $label_id (; conditional value ;))\n```",
+    br_table: [
+        "Table branch instruction. Jumps to one of the $label_ids based off of a provided index. Syntax:",
+        "```wat",
+        "(br_table $label_id1 $label_id2 $label_id3 (; index ;))",
+        "```",
+    ].join('\n'),
+    unreachable: "Declares an unreachable section of code.",
+    return: "Jumps to the end of the current function.",
 };
 const intAndFloatInstrs = ["load", "store", "const", "add", "sub", "mul", "eq", "ne"];
 const intInstrs = [
