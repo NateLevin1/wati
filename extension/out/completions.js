@@ -88,6 +88,33 @@ exports.instructionDocs = {
         "Example:",
         "```wat\n(table.get $funcs_table (i32.const 2))\n```",
     ].join('\n'),
+    "table.size": "Get current size of a table (in pages). Syntax:\n```wat\n(table.get $table_id)\n```",
+    "table.grow": [
+        "Grows a table by a given amount and returns the previous size. It fills the new entries with a provided init value.",
+        "If new size would exceed the maximum, -1 is returned and no action is performed. Syntax:",
+        "```wat\n(table.grow $table_id REFERENCE (i32.const NUMBER))\n```",
+        "Example:",
+        "```wat\n(table.grow $funcs_table (ref.null func) (i32.const 5))\n```",
+    ].join('\n'),
+    "table.fill": [
+        "Set all entries in a given range to a value. Syntax:",
+        "```wat\n(table.fill $table_id SOURCE_INDEX FILL_VALUE LENGTH)\n```",
+        "Example:",
+        "```wat\n(table.fill $funcs_table (i32.const 0) (ref.null func) (i32.const 10))\n```",
+    ].join('\n'),
+    "table.copy": [
+        "Copy elements from a range into another (possibly overlapping) region in a table. Syntax:",
+        "```wat\n(table.copy $table_id SOURCE_INDEX DEST_INDEX LENGTH)\n```",
+        "Example:",
+        "```wat\n(table.copy $funcs_table (i32.const 0) (i32.const 7) (i32.const 10))\n```",
+    ].join('\n'),
+    "table.init": [
+        "Copies items from a \"passive element segment\" into a table. Syntax:",
+        "```wat\n(table.init $elem_id DESTINATION_INDEX SOURCE_INDEX AMOUNT)\n```",
+        "Example:",
+        "```wat\n(table.init $funcs_elem (i32.const 0) (i32.const 0) (i32.const 5))\n```",
+    ].join('\n'),
+    "elem.drop": "Prevents use of a given passive element segment. Syntax:\n````wat\n(elem.drop $elem_id)\n````",
     call_indirect: [
         "Call a function retrieved from a table. A specific type must be specified. Syntax:",
         "```wat\n(call_indirect $table_id (type $type_id) TABLE_INDEX ...FUNC_ARGS)\n```",
@@ -106,7 +133,13 @@ exports.instructionDocs = {
     "ref.null": "Gets a null reference for a function or extern. Syntax:\n```wat\n(ref.null func) ;; empty ref for func type\n(ref.null extern) ;; empty ref for extern type\n```",
     "ref.is_null": "Checks if a reference is empty. Syntax:\n```wat\n(ref.null $ref_id)\n```",
     data: 'Allows for directly adding strings into a module\'s memory at a specified offset, similar to the .data section in traditional assembly.\n```wat\n(data (i32.const (;offset here;)) "Some string here")\n```',
+    "data.drop": "Prevent use of a data segment. Syntax:\n```wat\n(data.drop $data_id)\n```",
     memory: "Requests a block of memory. Syntax:\n```wat\n(memory MIN_SIZE [MAX_SIZE])\n```",
+    "memory.size": "Gets the current size of a memory (in pages). Syntax:\n```wat\n(memory.size $memory_id)\n```",
+    "memory.grow": "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.",
+    "memory.init": "Copies items from a \"passive element segment\" into memory.",
+    "memory.fill": "Fills memory region with provided value. Syntax:\n```wat\n(memory.fill START_INDEX VALUE LENGTH)\n```",
+    "memory.copy": "Copies range of memory to another (possibly overlapping) location. Syntax:\n```wat\n(memory.copy START_INDEX DEST_INDEX LENGTH)\n```",
     param: "Creates a parameter for a function with an optional name.\n```wat\n(param $name TYPE)\n```",
     result: "Specifies the result/return value for a function.\nSpecifying more than one type is supported in most implementations, see the [archived multi-value proposal](https://github.com/WebAssembly/multi-value).\n```wat\n(result ...TYPE)\n```",
     local: "Declares a local variable with an optional name.\n```wat\n(local $name TYPE)\n```",
@@ -118,8 +151,6 @@ exports.instructionDocs = {
     drop: "Throw away the first value on the stack",
     select: "Selects one of its first two operands based on whether its third operand is zero or not. It may include a value type determining the type of these operands.",
     call: "Call a function specified by name or index.",
-    "memory.size": "Returns the current size, in pages, of a memory.",
-    "memory.grow": "Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.",
     loop: [
         "Define a block with a label at the **start**. Syntax:",
         "```wat\n(loop $loop_id \n\t;; ...\n)\n```"
@@ -159,6 +190,7 @@ exports.instructionDocs = {
     ].join('\n'),
     unreachable: "Declares an unreachable section of code.",
     return: "Jumps to the end of the current function.",
+    nop: "no-op. Does nothing.",
 };
 const intAndFloatInstrs = ["load", "store", "const", "add", "sub", "mul", "eq", "ne"];
 const intInstrs = [
