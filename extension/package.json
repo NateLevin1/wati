@@ -80,5 +80,8 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/NateLevin1/wati"
+	},
+	"dependencies": {
+		"web-tree-sitter": "^0.20.8"
 	}
 }

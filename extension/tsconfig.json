@@ -4,10 +4,11 @@
 		"target": "es6",
 		"outDir": "out",
 		"lib": [
-			"es6",
+			"ES2019",
 			"ES2020.String",
 			"ES2019.Array"
 		],
+		"esModuleInterop": true,
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true   /* enable all strict type-checking options */
