@@ -1,9 +1,34 @@
 import Parser = require('web-tree-sitter');
 import type { QueryCapture, QueryMatch } from 'web-tree-sitter';
+import { getLanguage } from '.';
+
+/**
+ * Used for getting the right autocomplete suggestions when typing an identifier
+ * 
+ * @param node - The node tree to check in
+ * @param coords - The mouse coordinates
+ */
+export function getIdentContext(node: Parser.SyntaxNode, { column, row }: Parser.Point) {
+  let nodeAtPos: Parser.SyntaxNode = node.descendantForPosition({ column, row });
+  while ((nodeAtPos.type === "identifier" || nodeAtPos.type === 'index') && nodeAtPos.parent) {
+    nodeAtPos = nodeAtPos.parent;
+  }
+
+  if (nodeAtPos.type === 'type') return 'type';
+  if (nodeAtPos.type === 'call_indirect') return 'table';
+
+  const { text } = nodeAtPos;
+  if (text.startsWith('local.')) return 'local';
+  if (text.startsWith('global.')) return 'global';
+  if (text.startsWith('call')) return 'func';
+  if (text.startsWith('br')) return 'branch';
+
+  return null;
+}
 
 const queries = [
   [
-    'func_import', 
+    'func_import',
     `(module_field_import 
       (name) (name)
       (import_desc
@@ -76,17 +101,8 @@ const queries = [
 const identQueryString = queries.map(([_, pattern]) => pattern).join('\n');
 const queryList = queries.map(([name]) => name);
 
-const languageWasm = Parser.init()
-  .then(() => Parser.Language.load("./tree-sitter-wat.wasm"));
-
-export async function getAllIdents(sourceCode: string) {
-  const language = await languageWasm;
-
-  const parser = new Parser();
-  parser.setLanguage(language);
-  const tree = parser.parse(sourceCode);
-
-  const funcQuery = language.query(identQueryString);
+export function getAllIdentsFromTree(tree: Parser.Tree) {
+  const funcQuery = getLanguage().query(identQueryString);
   const queryMatches = funcQuery.matches(tree.rootNode);
   return getAllIdentsFromMatch(queryMatches);
 }
@@ -144,32 +160,50 @@ function getFuncIdents(captures: QueryCapture[], funcIndex = 0) {
   };
 }
 
-async function getAllIdentsFromMatch(queryMatches: QueryMatch[]) {
-  type IdentsRecord = Record<Exclude<typeof queryList[0], 'import' | 'type'>, any[]>;
-  const identsObj = Object.fromEntries(
-    queryList
-      // TODO: support type declaration
-      .filter((name) => name !== "func_import" && name !== "type")
-      .map((name) => [name, []])
-  ) as unknown as IdentsRecord;
+export interface Idents {
+  funcs: {
+    ident: string | number;
+    params: string[];
+    result: string | undefined;
+    localTypes?: string[];
+    localIdentMap?: Map<any, any>;
+    labels?: string[];
+    labelIdentMap?: Map<string, number> & Map<number, string>;
+  }[];
+  globals: {
+    ident: string | number,
+    type: string,
+  }[];
+  tables: {
+    ident: string | number,
+    limits?: string,
+    type?: string,
+  }[];
+}
+
+function getAllIdentsFromMatch(queryMatches: QueryMatch[]) {
+  // TODO: support type declaration
+  const funcs: Idents['funcs'] = [];
+  const globals: Idents['globals'] = [];
+  const tables: Idents['tables'] = [];
 
   try {
     for (const { captures, pattern } of queryMatches) {
       const queryName = queryList[pattern];
 
       if (queryName === "func") {
-        const funcObj = getFuncIdents(captures, identsObj.func.length);
-        identsObj.func.push(funcObj);
+        funcs.push(getFuncIdents(captures, funcs.length));
         continue;
       }
 
       if (queryName === "global") {
         const ident =
           captures.find(({ name }) => name === "ident")?.node.text ??
-          identsObj.global.length;
+          globals.length;
         const type = captures.find(({ name }) => name === "global_type")?.node
-          .text;
-        identsObj.global.push({ ident, type });
+          .text ?? 'UNKNOWN';
+
+        globals.push({ ident, type });
         continue;
       }
 
@@ -183,21 +217,22 @@ async function getAllIdentsFromMatch(queryMatches: QueryMatch[]) {
             result = node.text;
           }
         }
+
         const ident =
           captures.find(({ name }) => name === "ident")?.node.text ??
-          identsObj.func.length;
-        identsObj.func.push({ ident, params, result });
+          funcs.length;
+        funcs.push({ ident, params, result });
         continue;
       }
 
       if (queryName === "table") {
-        console.group("table");
-        const ident = captures.find(({ name }) => name === "ident")?.node.text;
+        const ident = captures.find(({ name }) => name === "ident")?.node.text ?? tables.length;
         const limits = captures.find(({ name }) => name === "limits")?.node
           .text;
         const type = captures.find(({ name }) => name === "ref_type")?.node
           .text;
-        identsObj.table.push({ ident, limits, type });
+
+        tables.push({ ident, limits, type });
         continue;
       }
     }
@@ -206,5 +241,5 @@ async function getAllIdentsFromMatch(queryMatches: QueryMatch[]) {
     console.error(e);
   }
 
-  return identsObj;
+  return { funcs, globals, tables } as Idents;
 }

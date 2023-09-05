@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { completionItems, makeCompletionItem, instructionDocs } from "./completions";
+import { fileTreeSitterMap, getAllIdentsFromTree, getParser } from "./tree-sitter";
 
 export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
@@ -369,11 +370,17 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile => {
 };
 const updateFiles = (document: vscode.TextDocument) => {
 	// if is wati or is wat and wat is enabled
-	if (
-		document.languageId === "wati" ||
-		(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles)
-	) {
-		files[document.uri.path] = getVariablesInFile(document);
+	const enabled = document.languageId === "wati" ||
+	(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles);
+	
+	if (!enabled) return;
+	
+	files[document.uri.path] = getVariablesInFile(document);
+
+	if (getParser()) {
+		const tree = getParser().parse(document.getText());
+		const idents = getAllIdentsFromTree(tree);
+		fileTreeSitterMap.set(document.uri.path, { idents, tree });
 	}
 };
 const getNameType = (m: RegExpMatchArray) => {
@@ -459,6 +466,8 @@ class WatiHoverProvider implements vscode.HoverProvider {
 		}
 
 		const file = files[document.uri.path];
+		const treeSitterData = fileTreeSitterMap.get(document.uri.path);
+		
 
 		if (word.startsWith("$")) {
 			// it is a global variable, local variable, function or block label
