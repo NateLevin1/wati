@@ -1,15 +1,18 @@
-import Parser = require('web-tree-sitter');
-import type { QueryCapture, QueryMatch } from 'web-tree-sitter';
-import { getLanguage } from '.';
+const Parser = require('web-tree-sitter');
+const { getLanguage } = require('./index.js');
+
+/** @typedef {import('web-tree-sitter').QueryCapture} QueryCapture */
+/** @typedef {import('web-tree-sitter').QueryMatch} QueryMatch */
+/** @typedef {import('./types.d.ts').Idents} Idents */
 
 /**
  * Used for getting the right autocomplete suggestions when typing an identifier
  * 
- * @param node - The node tree to check in
- * @param coords - The mouse coordinates
+ * @param {Parser.SyntaxNode} node - The node tree to check in
+ * @param {Parser.Point} coords - The mouse coordinates
  */
-export function getIdentContext(node: Parser.SyntaxNode, { column, row }: Parser.Point) {
-  let nodeAtPos: Parser.SyntaxNode = node.descendantForPosition({ column, row });
+function getIdentContext(node, { column, row }) {
+  let nodeAtPos = node.descendantForPosition({ column, row });
   while ((nodeAtPos.type === "identifier" || nodeAtPos.type === 'index') && nodeAtPos.parent) {
     nodeAtPos = nodeAtPos.parent;
   }
@@ -26,7 +29,7 @@ export function getIdentContext(node: Parser.SyntaxNode, { column, row }: Parser
   return null;
 }
 
-const queries = [
+const queries = /** @type {const} */([
   [
     'func_import',
     `(module_field_import 
@@ -96,18 +99,20 @@ const queries = [
       )) 
     )`
   ],
-] as const;
+]);
 
 const identQueryString = queries.map(([_, pattern]) => pattern).join('\n');
 const queryList = queries.map(([name]) => name);
 
-export function getAllIdentsFromTree(tree: Parser.Tree) {
+/** @param {Parser.Tree} tree */
+function getAllIdentsFromTree(tree) {
   const funcQuery = getLanguage().query(identQueryString);
   const queryMatches = funcQuery.matches(tree.rootNode);
   return getAllIdentsFromMatch(queryMatches);
 }
 
-function getFuncIdents(captures: QueryCapture[], funcIndex = 0) {
+/** @param {QueryCapture[]} captures */
+function getFuncIdents(captures, funcIndex = 0) {
   const params = [];
   const localTypes = [];
   const localIdentMap = new Map();
@@ -131,7 +136,8 @@ function getFuncIdents(captures: QueryCapture[], funcIndex = 0) {
   const result = captures.find(({ name }) => name === "result_type")?.node.text;
 
   const labels = [];
-  const labelIdentMap: Map<string, number> & Map<number, string> = new Map();
+  /** @type {Map<string, number> & Map<number, string>} */
+  const labelIdentMap = new Map();
   {
     const instructionText = captures.find(({ name }) => name === "instructions")
       ?.node.text;
@@ -160,32 +166,19 @@ function getFuncIdents(captures: QueryCapture[], funcIndex = 0) {
   };
 }
 
-export interface Idents {
-  funcs: {
-    ident: string | number;
-    params: string[];
-    result: string | undefined;
-    localTypes?: string[];
-    localIdentMap?: Map<any, any>;
-    labels?: string[];
-    labelIdentMap?: Map<string, number> & Map<number, string>;
-  }[];
-  globals: {
-    ident: string | number,
-    type: string,
-  }[];
-  tables: {
-    ident: string | number,
-    limits?: string,
-    type?: string,
-  }[];
-}
-
-function getAllIdentsFromMatch(queryMatches: QueryMatch[]) {
+/** 
+ * @param {QueryMatch[]} queryMatches 
+ * @returns {Idents}
+ * */
+function getAllIdentsFromMatch(queryMatches) {
   // TODO: support type declaration
-  const funcs: Idents['funcs'] = [];
-  const globals: Idents['globals'] = [];
-  const tables: Idents['tables'] = [];
+
+  /** @type {Idents['funcs']} */
+  const funcs = [];
+  /** @type {Idents['globals']} */
+  const globals = [];
+  /** @type {Idents['tables']} */
+  const tables = [];
 
   try {
     for (const { captures, pattern } of queryMatches) {
@@ -241,5 +234,7 @@ function getAllIdentsFromMatch(queryMatches: QueryMatch[]) {
     console.error(e);
   }
 
-  return { funcs, globals, tables } as Idents;
+  return { funcs, globals, tables };
 }
+
+module.exports = { getIdentContext, getAllIdentsFromTree };
