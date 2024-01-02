@@ -1,6 +1,6 @@
 const vscode = require("vscode");
 const { completionItems, makeCompletionItem, instructionDocs } = require("./completions.js");
-const { fileTreeSitterMap, getAllIdentsFromTree, getParser } = require("./tree-sitter/index.js");
+const { fileTreeSitterMap, getParser, getHoverData } = require("./tree-sitter/index.js");
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
@@ -347,14 +347,12 @@ const getVariablesInFile = (document) => {
 		}
 
 		/** @type {Variable[]} */
-		let parameters = [];
-		if (paramString) {
-			const paramMatch = [...paramString.matchAll(getParamsOrLocals)];
-			parameters = paramMatch.map(getNameType);
-		}
+		const parameters = paramString 
+			? [...paramString.matchAll(getParamsOrLocals)].map(getNameType)
+			: [];
 
 		/** @type {VariableByName} */
-		let locals = {};
+		const locals = {};
 		if (localString) {
 			const localMatch = [...localString.matchAll(getParamsOrLocals)];
 			const localsArr = localMatch.map(getNameType);
@@ -373,8 +371,9 @@ const getVariablesInFile = (document) => {
 			blocks: {},
 		};
 	});
+
 	const lines = text.split(/^/gm);
-	for (var i = 0; i < lines.length; i++) {
+	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		const block = line.match(getBlock);
 		if (!block) continue;
@@ -397,15 +396,14 @@ const updateFiles = (document) => {
 	// if is wati or is wat and wat is enabled
 	const enabled = document.languageId === "wati" ||
 	(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles);
-	
 	if (!enabled) return;
 	
 	files[document.uri.path] = getVariablesInFile(document);
 
-	if (getParser()) {
-		const tree = getParser().parse(document.getText());
-		const idents = getAllIdentsFromTree(tree);
-		fileTreeSitterMap.set(document.uri.path, { idents, tree });
+	const parser = getParser();
+	if (parser) {
+		const tree = parser.parse(document.getText());
+		fileTreeSitterMap.set(document.uri.path, { tree });
 	}
 };
 
@@ -483,7 +481,27 @@ class WatiHoverProvider {
 		}
 		updateFiles(document);
 
-		const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/)).trim();
+		const positionRange = document.getWordRangeAtPosition(position, /[^ ();,]+/);
+		if (!positionRange) return null;
+
+		const word = document.getText(positionRange).trim();
+		if (instructionDocs[word]) {
+			return new vscode.Hover(instructionDocs[word]);
+		}
+
+		// tree-sitter logic
+		{
+			const fileData = fileTreeSitterMap.get(document.uri.path);
+			if (!fileData) return null;
+
+			const position = { row: positionRange.start.line, column: positionRange.start.character };
+			const node = fileData.tree.rootNode.descendantForPosition(position);
+			const hoverData = getHoverData(node);
+			if (hoverData) return hoverData;
+			
+			console.log({ type: node.type });
+		}
+
 		const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
 
 		// get the current function
@@ -500,8 +518,6 @@ class WatiHoverProvider {
 		}
 
 		const file = files[document.uri.path];
-		const treeSitterData = fileTreeSitterMap.get(document.uri.path);
-		
 
 		if (word.startsWith("$")) {
 			// it is a global variable, local variable, function or block label

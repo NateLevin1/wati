@@ -26,7 +26,7 @@ export interface VariableByName {
 export interface Variable {
 	type: VariableType;
 	isMutable?: boolean;
-	name: string | undefined; // includes the $, is undefined if no name (just indexed)
+	name: string | void; // includes the $, is undefined if no name (just indexed)
 	initialValue?: string;
 }
 
