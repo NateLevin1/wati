@@ -498,8 +498,6 @@ class WatiHoverProvider {
 			const node = fileData.tree.rootNode.descendantForPosition(position);
 			const hoverData = getHoverData(node);
 			if (hoverData) return hoverData;
-			
-			console.log({ type: node.type });
 		}
 
 		const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
