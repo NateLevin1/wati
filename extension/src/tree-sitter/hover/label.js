@@ -13,9 +13,7 @@ const labelHoverQuery = `(expr1
 		) @label_body
 	]
 )`;
-// (loop) @label_type 
-// (block) @label_type 
-		
+
 /**
  * @param {Parser.Language} language
  * @param {Parser.SyntaxNode} node identifier
@@ -28,14 +26,14 @@ function getLabelHoverString(language, node) {
 	if (!funcNode) return new vscode.Hover("Could not resolve current function");
 
 	const matches = queryWithErr(language, labelHoverQuery, funcNode);
-	
+
 	for (const { captures } of matches) {
 		const ident = captures.find(({ name }) => name === "ident")?.node.text;
 		if (ident !== callIdent) continue;
 
-    const labelBody = captures.find(({ name }) => name === "label_body")?.node;
-		const type = labelBody?.type.split('_')[1];
-    
+		const labelBody = captures.find(({ name }) => name === "label_body")?.node;
+		const type = labelBody?.type.split("_")[1];
+
 		const hoverCode = `(${type} ${ident})`;
 
 		const out = new vscode.MarkdownString();

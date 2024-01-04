@@ -23,14 +23,20 @@ function getHoverData(language, node) {
 
 	console.log([node.type, node.parent.type, node.parent.parent?.type]);
 
-	if (parent.type === 'expr1_loop' || parent.type === 'expr1_block') {
+	if (parent.type === "expr1_loop" || parent.type === "expr1_block") {
 		return getLabelHoverString(language, node);
 	}
-	if (parent.type === 'module_field_global') {
+	if (parent.type === "module_field_global") {
 		return getGlobalHoverString(language, node);
 	}
 
-	if (["module_field_func", "import_desc_func_type", "func_type_params_one"].includes(parent.type)) {
+	if (
+		[
+			"module_field_func",
+			"import_desc_func_type",
+			"func_type_params_one",
+		].includes(parent.type)
+	) {
 		return getFunctionHoverString(language, node);
 	}
 	if (parent.parent?.type === "export_desc_func") {

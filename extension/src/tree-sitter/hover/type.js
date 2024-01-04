@@ -17,15 +17,17 @@ function getTypeHoverString(language, node) {
 	const callIdent = node.text;
 
 	const moduleNode = getParentNode(node, "module");
-	if (!moduleNode) return new vscode.Hover("Could not resolve current function");
+	if (!moduleNode) {
+		return new vscode.Hover("Could not resolve current function");
+	}
 
 	const matches = queryWithErr(language, typeHoverQuery, moduleNode);
 	for (const { captures } of matches) {
 		const ident = captures.find(({ name }) => name === "ident")?.node.text;
 		if (ident !== callIdent) continue;
 
-    const typeInfo = captures.find(({ name }) => name === "type")?.node.text;
-    
+		const typeInfo = captures.find(({ name }) => name === "type")?.node.text;
+
 		const hoverCode = `(type ${ident} ${typeInfo})`;
 
 		const out = new vscode.MarkdownString();

@@ -38,11 +38,12 @@ function getLocalHoverString(language, node) {
 	const localIdent = node.text;
 
 	const moduleNode = getParentNode(node, "module_field_func");
-	if (!moduleNode) return new vscode.Hover("Could not resolve current function");
+	if (!moduleNode)
+		return new vscode.Hover("Could not resolve current function");
 
 	const params = [];
 	const localTypes = [];
-  /** @type {Map<string, number>} */
+	/** @type {Map<string, number>} */
 	const localIdentMap = new Map();
 
 	const [{ captures }] = queryWithErr(language, localHoverQuery, moduleNode);
@@ -59,7 +60,7 @@ function getLocalHoverString(language, node) {
 	}
 
 	const localIdentIndex = localIdentMap.get(localIdent);
-	if (typeof localIdentIndex !== 'number') {
+	if (typeof localIdentIndex !== "number") {
 		return new vscode.Hover("No such local variable in scope");
 	}
 

@@ -27,5 +27,4 @@ function getParentNode(node, type) {
 	}
 }
 
-
 module.exports = { queryWithErr, getParentNode };

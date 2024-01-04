@@ -19,16 +19,18 @@ function getTableHoverString(language, node) {
 	const callIdent = node.text;
 
 	const moduleNode = getParentNode(node, "module");
-	if (!moduleNode) return new vscode.Hover("Could not resolve current function");
+	if (!moduleNode) {
+		return new vscode.Hover("Could not resolve current function");
+	}
 
 	const matches = queryWithErr(language, tableHoverQuery, moduleNode);
 	for (const { captures } of matches) {
 		const ident = captures.find(({ name }) => name === "ident")?.node.text;
 		if (ident !== callIdent) continue;
 
-    const limits = captures.find(({ name }) => name === "limits")?.node.text;
-    const refType = captures.find(({ name }) => name === "ref_type")?.node.text;
-    
+		const limits = captures.find(({ name }) => name === "limits")?.node.text;
+		const refType = captures.find(({ name }) => name === "ref_type")?.node.text;
+
 		const hoverCode = `(table ${ident} ${limits} ${refType})`;
 
 		const out = new vscode.MarkdownString();

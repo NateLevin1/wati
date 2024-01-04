@@ -5,7 +5,7 @@ const { queryWithErr, getParentNode } = require("./utils");
 
 const globalHoverQuery = `
 	[
-		(module_field_global identifier: (identifier)? @ident (global_type) @global_type)
+		(module_field_global (identifier)? @ident (global_type) @global_type)
 		(import_desc_global_type (identifier)? @ident (global_type) @global_type)
 	]
 `;
