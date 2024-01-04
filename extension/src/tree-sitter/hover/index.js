@@ -6,18 +6,7 @@ const getGlobalHoverString = require("./global.js");
 const getLocalHoverString = require("./local.js");
 const getTableHoverString = require("./table.js");
 const getTypeHoverString = require("./type.js");
-
-/**
- *  @param {Parser.SyntaxNode} node
- * @returns {string}
- */
-const getTypeTree = (node) => {
-	if (!node.children.length) return ` (${node.type})`;
-	return node.children.map((child) => {
-		if (!child.children.length) return child.type;
-		return `(${child.type} ${getTypeTree(child)})`
-	}).join("");
-};
+const getLabelHoverString = require("./label.js");
 
 /**
  * Get hover data for identifiers
@@ -32,7 +21,19 @@ function getHoverData(language, node) {
 
 	const parent = node.parent;
 
-	if (parent.type === "module_field_func" || parent.type === "import_desc_func_type" || parent.type === "func_type_params_one") {
+	console.log([node.type, node.parent.type, node.parent.parent?.type]);
+
+	if (parent.type === 'expr1_loop' || parent.type === 'expr1_block') {
+		return getLabelHoverString(language, node);
+	}
+	if (parent.type === 'module_field_global') {
+		return getGlobalHoverString(language, node);
+	}
+
+	if (["module_field_func", "import_desc_func_type", "func_type_params_one"].includes(parent.type)) {
+		return getFunctionHoverString(language, node);
+	}
+	if (parent.parent?.type === "export_desc_func") {
 		return getFunctionHoverString(language, node);
 	}
 
@@ -47,13 +48,16 @@ function getHoverData(language, node) {
 		if (surroundingText.startsWith("call")) {
 			return getFunctionHoverString(language, node);
 		}
+		if (surroundingText.startsWith("br")) {
+			return getLabelHoverString(language, node);
+		}
 	}
 
 	if (parent?.parent?.type === "expr1_call") {
 		if (parent.parent.text.startsWith("call_indirect")) {
 			return getTableHoverString(language, node);
 		}
-	} else if (parent?.type === "module_field_table") {
+	} else if (parent.type === "module_field_table") {
 		if (parent.text.startsWith("(table")) {
 			return getTableHoverString(language, node);
 		}
@@ -72,7 +76,7 @@ function getHoverData(language, node) {
 		}
 	}
 
-	if (parent?.type === "module_field_type") {
+	if (parent.type === "module_field_type") {
 		if (parent.text.startsWith("(type")) {
 			return getTypeHoverString(language, node);
 		}
