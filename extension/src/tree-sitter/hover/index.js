@@ -17,12 +17,14 @@ const getLabelHoverString = require("./label.js");
  * @returns {vscode.Hover | undefined}
  * */
 function getHoverData(language, node) {
-	if (node.type !== "identifier" || !node.parent) return;
+	if (node.type !== "identifier" && node.type !== 'dec_nat') return;
 
-	const parent = node.parent;
-
-	console.log([node.type, node.parent.type, node.parent.parent?.type]);
-
+	let parent = node.parent;
+	if (node.type === 'dec_nat') {
+		parent = node.parent?.parent ?? null;
+	}
+	if (!parent) return;
+	
 	if (parent.type === "expr1_loop" || parent.type === "expr1_block") {
 		return getLabelHoverString(language, node);
 	}

@@ -1,18 +1,19 @@
 const Parser = require("web-tree-sitter");
 const vscode = require("vscode");
 
-const { queryWithErr, getParentNode } = require("./utils");
+const { queryWithErr, getParentNode, getIdent } = require("./utils");
 
 const functionHoverQuery = `
 [
   (module_field_import 
     (import_desc
       (import_desc_func_type
-        (identifier) @ident
+        (identifier)? @ident
       ) @func_type
     )
   )
-  (module_field_func identifier: (identifier)? @ident
+  (module_field_func 
+    (identifier)? @ident
     (func_type_params
       [
         (func_type_params_one
@@ -31,19 +32,20 @@ const functionHoverQuery = `
 
 /**
  * @param {Parser.Language} language
- * @param {Parser.SyntaxNode} node either module_field_func or import_desc_func_type
+ * @param {Parser.SyntaxNode} node
  * @returns {vscode.Hover}
  * */
 function getFunctionHoverString(language, node) {
+  const functionIdent = getIdent(node);
+
 	const moduleNode = getParentNode(node, "module");
 	if (!moduleNode) return new vscode.Hover("Could not resolve module");
 
 	const matches = queryWithErr(language, functionHoverQuery, moduleNode);
 
-	for (const { captures } of matches) {
-		const name = captures.find(({ name }) => name === "ident")?.node.text;
-
-		if (name !== node.text) continue;
+	for (const [index, { captures }] of matches.entries()) {
+		const ident = captures.find(({ name }) => name === "ident")?.node.text ?? index;
+		if (ident !== functionIdent && index !== functionIdent) continue;
 
 		const importFuncSignature = captures.find(({ name }) => name === "func_type");
 		if (importFuncSignature) {
@@ -52,7 +54,7 @@ function getFunctionHoverString(language, node) {
 			return new vscode.Hover(out);
 		}
 
-		let hoverCode = `(func ${name}`;
+		let hoverCode = `(func ${ident}`;
 
 		const params = captures
 			.filter(({ name }) => name === "params_type")

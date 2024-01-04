@@ -1,9 +1,10 @@
 const Parser = require("web-tree-sitter");
 const vscode = require("vscode");
 
-const { queryWithErr, getParentNode } = require("./utils");
+const { queryWithErr, getParentNode, getIdent } = require("./utils");
 
-const localHoverQuery = `(module_field_func identifier: (identifier)?
+const localHoverQuery = `(module_field_func 
+	(identifier)?
   (func_type_params
     [
       (func_type_params_one
@@ -35,7 +36,7 @@ const localHoverQuery = `(module_field_func identifier: (identifier)?
  * @returns {vscode.Hover}
  * */
 function getLocalHoverString(language, node) {
-	const localIdent = node.text;
+	const localIdent = getIdent(node);
 
 	const moduleNode = getParentNode(node, "module_field_func");
 	if (!moduleNode)
@@ -44,7 +45,9 @@ function getLocalHoverString(language, node) {
 	const params = [];
 	const localTypes = [];
 	/** @type {Map<string, number>} */
-	const localIdentMap = new Map();
+	const identToIndex = new Map();
+	/** @type {Map<number, string>} */
+	const indexToIdent = new Map();
 
 	const [{ captures }] = queryWithErr(language, localHoverQuery, moduleNode);
 	for (const { name, node } of captures) {
@@ -55,17 +58,20 @@ function getLocalHoverString(language, node) {
 		} else if (name === "params_ident" || name === "locals_ident") {
 			const ident = node.text;
 			const index = localTypes.length;
-			localIdentMap.set(ident, index);
+			identToIndex.set(ident, index);
+			indexToIdent.set(index, ident);
 		}
 	}
 
-	const localIdentIndex = localIdentMap.get(localIdent);
+	const localIdentIndex = typeof localIdent === 'number' ? localIdent : identToIndex.get(localIdent);
 	if (typeof localIdentIndex !== "number") {
 		return new vscode.Hover("No such local variable in scope");
 	}
 
 	const localType = localIdentIndex < params.length ? "param" : "local";
-	const hoverCode = `(${localType} ${localIdent} (${localTypes[localIdentIndex]}))`;
+	const name = typeof localIdent === 'string' ? localIdent : indexToIdent.get(localIdent) ?? localIdent;
+	const hoverCode = `(${localType} ${name} (${localTypes[localIdentIndex]}))`;
+
 	const out = new vscode.MarkdownString();
 	out.appendCodeblock(hoverCode, "wati");
 	return new vscode.Hover(out);

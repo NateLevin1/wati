@@ -27,4 +27,14 @@ function getParentNode(node, type) {
 	}
 }
 
-module.exports = { queryWithErr, getParentNode };
+/**
+ * @param {Parser.SyntaxNode} node
+ * */
+function getIdent(node) {
+	const ident = node.text;
+	const index = Number(ident);
+
+	return Number.isNaN(index) ? ident : index;
+}
+
+module.exports = { queryWithErr, getParentNode, getIdent };

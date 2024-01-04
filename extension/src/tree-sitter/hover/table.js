@@ -1,9 +1,10 @@
 const Parser = require("web-tree-sitter");
 const vscode = require("vscode");
 
-const { queryWithErr, getParentNode } = require("./utils");
+const { queryWithErr, getParentNode, getIdent } = require("./utils");
 
-const tableHoverQuery = `(module_field_table identifier: (identifier) @ident 
+const tableHoverQuery = `(module_field_table
+	(identifier)? @ident 
   (table_fields_type (table_type
     (limits) @limits
     (ref_type) @ref_type
@@ -16,7 +17,7 @@ const tableHoverQuery = `(module_field_table identifier: (identifier) @ident
  * @returns {vscode.Hover}
  * */
 function getTableHoverString(language, node) {
-	const callIdent = node.text;
+	const callIdent = getIdent(node);
 
 	const moduleNode = getParentNode(node, "module");
 	if (!moduleNode) {
@@ -24,9 +25,9 @@ function getTableHoverString(language, node) {
 	}
 
 	const matches = queryWithErr(language, tableHoverQuery, moduleNode);
-	for (const { captures } of matches) {
-		const ident = captures.find(({ name }) => name === "ident")?.node.text;
-		if (ident !== callIdent) continue;
+	for (const [index, { captures }] of matches.entries()) {
+		const ident = captures.find(({ name }) => name === "ident")?.node.text ?? index;
+		if (ident !== callIdent && index !== callIdent) continue;
 
 		const limits = captures.find(({ name }) => name === "limits")?.node.text;
 		const refType = captures.find(({ name }) => name === "ref_type")?.node.text;

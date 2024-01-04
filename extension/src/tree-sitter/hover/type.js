@@ -1,10 +1,10 @@
 const Parser = require("web-tree-sitter");
 const vscode = require("vscode");
 
-const { queryWithErr, getParentNode } = require("./utils");
+const { queryWithErr, getParentNode, getIdent } = require("./utils");
 
 const typeHoverQuery = `(module_field_type
-  (identifier) @ident 
+  (identifier)? @ident 
   (type_field) @type
 )`;
 
@@ -14,7 +14,7 @@ const typeHoverQuery = `(module_field_type
  * @returns {vscode.Hover}
  * */
 function getTypeHoverString(language, node) {
-	const callIdent = node.text;
+	const typeIdent = getIdent(node);
 
 	const moduleNode = getParentNode(node, "module");
 	if (!moduleNode) {
@@ -22,9 +22,9 @@ function getTypeHoverString(language, node) {
 	}
 
 	const matches = queryWithErr(language, typeHoverQuery, moduleNode);
-	for (const { captures } of matches) {
-		const ident = captures.find(({ name }) => name === "ident")?.node.text;
-		if (ident !== callIdent) continue;
+	for (const [index, { captures }] of matches.entries()) {
+		const ident = captures.find(({ name }) => name === "ident")?.node.text ?? index;
+		if (ident !== typeIdent && index !== typeIdent) continue;
 
 		const typeInfo = captures.find(({ name }) => name === "type")?.node.text;
 

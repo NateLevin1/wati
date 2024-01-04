@@ -1,7 +1,7 @@
 const Parser = require("web-tree-sitter");
 const vscode = require("vscode");
 
-const { queryWithErr, getParentNode } = require("./utils");
+const { queryWithErr, getParentNode, getIdent } = require("./utils");
 
 const globalHoverQuery = `
 	[
@@ -16,24 +16,25 @@ const globalHoverQuery = `
  * @returns {vscode.Hover}
  * */
 function getGlobalHoverString(language, node) {
-	const globalIdent = node.text;
+	const globalIdent = getIdent(node);
 
 	const moduleNode = getParentNode(node, "module");
 	if (!moduleNode) return new vscode.Hover("Could not resolve module");
 
 	const matches = queryWithErr(language, globalHoverQuery, moduleNode);
-	for (const { captures } of matches) {
-		const ident = captures.find(({ name }) => name === "ident")?.node.text;
+	for (const [index, { captures }] of matches.entries()) {
+		const ident = captures.find(({ name }) => name === "ident")?.node.text ?? index;
 		if (ident !== globalIdent) continue;
 
 		const type = captures.find(({ name }) => name === "global_type")?.node.text;
 
-		const hoverCode = `(global ${globalIdent} ${type})`;
+		const hoverCode = `(global ${ident} ${type})`;
 
 		const out = new vscode.MarkdownString();
 		out.appendCodeblock(hoverCode, "wati");
 		return new vscode.Hover(out);
 	}
+
 	return new vscode.Hover("No such global variable in scope");
 }
 
