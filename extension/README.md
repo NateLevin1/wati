@@ -38,6 +38,10 @@ WATI provides code completion, intellisense, and hover information for the WebAs
 
 ## Release Notes
 
+### 1.1.8
+
+Thanks to [@EmNudge](https://github.com/EmNudge), hover information now also works when hovering indexes (e.g. `0` in `local.get 0`)
+
 ### 1.1.4
 
 New emmet-like WAT completions are now available. These new completions allow you to quickly write WAT code with fewer keystrokes!
@@ -46,7 +50,7 @@ New emmet-like WAT completions are now available. These new completions allow yo
 
 **Greatly improved code comprehension**: Much more accurate variable recognition, display global initial values, completion and hover information for block labels.
 
-Also adds more documentation and deprecate .wati support.
+Also adds more documentation and deprecates .wati support.
 
 ## 1.0.2
 

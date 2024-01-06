@@ -2,6 +2,12 @@
 
 All notable changes to the "wati" extension will be documented in this file.
 
+## 1.1.8
+
+### Changes
+
+- Thanks to [@EmNudge](https://github.com/EmNudge), hover information for labels is now more accurate with fewer edge cases. Hover information now also works when hovering indexes (e.g. `0` in `local.get 0`)
+
 ## 1.1.6
 
 ### Changes
