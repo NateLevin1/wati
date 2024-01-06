@@ -3,16 +3,23 @@ const vscode = require("vscode");
 
 const { queryWithErr, getParentNode, getIdent } = require("./utils");
 
-const labelHoverQuery = `(expr1 
-	[
-		(expr1_loop 
-			(identifier)? @ident
-		) @label_body
-		(expr1_block 
-			(identifier)? @ident
-		) @label_body
-	]
-)`;
+const labelHoverQuery = ` 
+[
+	(expr1_loop 
+		(identifier)? @ident
+	) @label_body
+	(block_loop 
+		(identifier)? @ident
+	) @label_body
+
+	(expr1_block 
+		(identifier)? @ident
+	) @label_body
+	(block_block 
+		(identifier)? @ident
+	) @label_body
+]
+`;
 
 /**
  * @param {Parser.Language} language
