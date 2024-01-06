@@ -1,6 +1,12 @@
-import * as vscode from "vscode";
+const vscode = require("vscode");
 
-export const makeCompletionItem = (label: string, options?: Partial<vscode.CompletionItem>) => {
+/**
+ * 
+ * @param {string} label 
+ * @param {Partial<vscode.CompletionItem>} options 
+ * @returns {vscode.CompletionItem}
+ */
+const makeCompletionItem = (label, options) => {
 	const item = new vscode.CompletionItem(label);
 	for (const optionName in options) {
 		// @ts-ignore
@@ -12,9 +18,17 @@ export const makeCompletionItem = (label: string, options?: Partial<vscode.Compl
 	}
 	return item;
 };
-const instrsToCompletionItems = (instrs: string[], type: "i32" | "i64" | "f32" | "f64") => {
+module.exports.makeCompletionItem = makeCompletionItem;
+
+/**
+ * 
+ * @param {string[]} instrs instructions
+ * @param {"i32" | "i64" | "f32" | "f64"} type 
+ */
+const instrsToCompletionItems = (instrs, type) => {
 	return instrs.map((instr) => {
-		const documentation: string | undefined = instructionDocs[`${type}.${instr}`] ?? instructionDocs[`TYPE.${instr}`];
+		/** @type {string | void} */
+		const documentation = instructionDocs[`${type}.${instr}`] ?? instructionDocs[`TYPE.${instr}`];
 		return makeCompletionItem(instr, {
 			documentation: documentation ? new vscode.MarkdownString(documentation.replace(/TYPE/g, type)) : undefined,
 			kind: vscode.CompletionItemKind.Field,
@@ -24,7 +38,8 @@ const instrsToCompletionItems = (instrs: string[], type: "i32" | "i64" | "f32" |
 
 // documentation shared between hovers and completion
 // docs starting with "TYPE." will match any type (e.g TYPE.load will show for i32.load, i64.load, f32.load, and f64.load)
-export const instructionDocs: { [instruction: string]: string } = {
+/** @type {Record<string, string>} */
+const instructionDocs = {
 	"TYPE.load":
 		"Push a value from memory onto the stack at a specified offset.\n```wati\n($offset i32) ($align i32) (result TYPE)\n```",
 	"TYPE.store": "Store a value into memory at a specified offset.\n```wati\n($offset i32) ($newValue TYPE)\n```",
@@ -205,6 +220,7 @@ export const instructionDocs: { [instruction: string]: string } = {
 	nop: "no-op. Does nothing.",
 	// "TYPE.": "",
 };
+module.exports.instructionDocs = instructionDocs;
 
 const intAndFloatInstrs = ["load", "store", "const", "add", "sub", "mul", "eq", "ne"];
 const intInstrs = [
@@ -257,7 +273,8 @@ const floatInstrs = [
 	"ge",
 ];
 
-export const completionItems: { [key: string]: vscode.CompletionItem[] } = {
+/** @type {Record<string, vscode.CompletionItem[]>} */
+const completionItems = {
 	"i32.": [...instrsToCompletionItems(intAndFloatInstrs, "i32"), ...instrsToCompletionItems(intInstrs, "i32")],
 	"i64.": [
 		...instrsToCompletionItems(intAndFloatInstrs, "i64"),
@@ -366,3 +383,4 @@ export const completionItems: { [key: string]: vscode.CompletionItem[] } = {
 		}),
 	],
 };
+module.exports.completionItems = completionItems;

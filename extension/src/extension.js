@@ -1,13 +1,17 @@
-import * as vscode from "vscode";
-import { completionItems, makeCompletionItem, instructionDocs } from "./completions";
+const vscode = require("vscode");
+const { completionItems, makeCompletionItem, instructionDocs } = require("./completions.js");
+const { fileTreeSitterMap, getParser, getHoverData } = require("./tree-sitter/index.js");
 
-export function activate(context: vscode.ExtensionContext) {
+/** @param {vscode.ExtensionContext} context */
+function activate(context) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log("wati is now active.");
 
-	const wati: vscode.DocumentSelector = "wati";
-	const wat: vscode.DocumentSelector = "wat";
+	/** @type {vscode.DocumentSelector} */
+	const wati = "wati";
+	/** @type {vscode.DocumentSelector} */
+	const wat = "wat";
 
 	// WATI
 	context.subscriptions.push(vscode.languages.registerHoverProvider(wati, new WatiHoverProvider()));
@@ -37,17 +41,12 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(wat, new WatiSignatureHelpProvider(), "(", ","));
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {}
+module.exports.activate = activate;
 
 // SIGNATURE HELP
-class WatiSignatureHelpProvider implements vscode.SignatureHelpProvider {
-	public provideSignatureHelp(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-		token: vscode.CancellationToken,
-		sigHelpContext: vscode.SignatureHelpContext
-	): vscode.SignatureHelp | undefined {
+class WatiSignatureHelpProvider {
+	/** @type {vscode.SignatureHelpProvider['provideSignatureHelp']} */
+	provideSignatureHelp(document, position, token, sigHelpContext) {
 		// disable if wat and not on in wat
 		if (document.languageId === "wat" && !vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles) {
 			return undefined;
@@ -70,7 +69,7 @@ class WatiSignatureHelpProvider implements vscode.SignatureHelpProvider {
 					sig.parameters = [
 						...funcRef.parameters
 							.filter((p) => !!p.name)
-							.map((p) => new vscode.ParameterInformation(`(${(p as any).name} ${p.type})`)),
+							.map((p) => new vscode.ParameterInformation(`(${p.name} ${p.type})`)),
 					];
 					sigHelp.activeParameter = (args.match(/,/g) ?? []).length;
 					sigHelp.activeSignature = 0;
@@ -91,7 +90,15 @@ class WatiSignatureHelpProvider implements vscode.SignatureHelpProvider {
 		}
 	}
 }
-const getCallAtCursor = (line: string, cursorPos: number, previousLine?: string): string => {
+
+/**
+ * 
+ * @param {string} line 
+ * @param {number} cursorPos 
+ * @param {string | void} previousLine 
+ * @returns {string}
+ */
+const getCallAtCursor = (line, cursorPos, previousLine) => {
 	let openParenIndex = line.indexOf("(");
 	if (openParenIndex !== -1) {
 		if (openParenIndex !== -1) {
@@ -129,7 +136,18 @@ const getCallAtCursor = (line: string, cursorPos: number, previousLine?: string)
 	return previousLine ?? line;
 };
 
-// COMPLETION
+/**
+ * COMPLETION
+ * 
+ * @param {{
+ * prefix: string;
+ * wasmInstr: string;
+ * variables: vscode.CompletionItem[];
+ * position: vscode.Position;
+ * wasmAfterVar?: string;
+ * command?: vscode.Command;
+ * }} mapVariablesParams 
+ */
 const mapVariables = ({
 	prefix,
 	wasmInstr,
@@ -137,13 +155,6 @@ const mapVariables = ({
 	position,
 	wasmAfterVar,
 	command,
-}: {
-	prefix: string;
-	wasmInstr: string;
-	variables: vscode.CompletionItem[];
-	position: vscode.Position;
-	wasmAfterVar?: string;
-	command?: vscode.Command;
 }) => {
 	return variables.map((completionItem) => {
 		const varName = completionItem.label;
@@ -157,13 +168,11 @@ const mapVariables = ({
 		});
 	});
 };
-class WatiVariableCompletionProvider implements vscode.CompletionItemProvider {
-	public provideCompletionItems(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-		token: vscode.CancellationToken,
-		completionContext: vscode.CompletionContext
-	): vscode.CompletionItem[] | undefined {
+
+
+class WatiVariableCompletionProvider {
+	/** @type {vscode.CompletionItemProvider['provideCompletionItems']} */
+	provideCompletionItems(document, position, token, completionContext) {
 		// disable if wat and not on in wat
 		if (document.languageId === "wat" && !vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles) {
 			return undefined;
@@ -195,7 +204,7 @@ class WatiVariableCompletionProvider implements vscode.CompletionItemProvider {
 					);
 			}
 
-			const curFunc = getCurFunc(document, position);
+			const curFunc = getCurFunc(document, position.line);
 
 			const isBranch = linePrefix.match(/br(?:_if)?\s*\$$/);
 			if (curFunc && isBranch) {
@@ -211,10 +220,12 @@ class WatiVariableCompletionProvider implements vscode.CompletionItemProvider {
 				? [
 						...Object.values(files[document.uri.path].functions[curFunc].locals)
 							.filter((v) => !!v.name)
-							.map((v) => makeCompletionItem((v as { name: string }).name.slice(1), { detail: `(local) ${v.type}` })),
+							// @ts-expect-error - v.name is not undefined
+							.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(local) ${v.type}` })),
 						...files[document.uri.path].functions[curFunc].parameters
 							.filter((v) => !!v.name)
-							.map((v) => makeCompletionItem((v as { name: string }).name.slice(1), { detail: `(param) ${v.type}` })),
+							// @ts-expect-error - v.name is not undefined
+							.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(param) ${v.type}` })),
 				  ]
 				: [];
 
@@ -241,7 +252,8 @@ class WatiVariableCompletionProvider implements vscode.CompletionItemProvider {
 			const isGlobalVar = linePrefix.endsWith("g$");
 			const globalVariables = Object.values(files[document.uri.path].globals)
 				.filter((v) => !!v.name)
-				.map((v) => makeCompletionItem((v as { name: string }).name.slice(1), { detail: `(global) ${v.type}` }));
+				// @ts-expect-error - v.name is not undefined
+				.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(global) ${v.type}` }));
 
 			if (isGlobalVar) {
 				return mapVariables({ prefix: "g", wasmInstr: "global.get", variables: globalVariables, position });
@@ -269,14 +281,16 @@ class WatiVariableCompletionProvider implements vscode.CompletionItemProvider {
 	}
 }
 
-class WatiSyntaxCompletionProvider implements vscode.CompletionItemProvider {
-	public static triggerCharacters = ["2", "4", "$"];
-	public provideCompletionItems(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-		token: vscode.CancellationToken,
-		completionContext: vscode.CompletionContext
-	): vscode.CompletionItem[] | undefined {
+
+class WatiSyntaxCompletionProvider {
+	static triggerCharacters = ["2", "4", "$"];
+	/** @type {vscode.CompletionItemProvider['provideCompletionItems']} */
+	provideCompletionItems(
+		document,
+		position,
+		token,
+		completionContext
+	) {
 		// disable if wat and not on in wat
 		if (document.languageId === "wat" && !vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles) {
 			return undefined;
@@ -294,17 +308,28 @@ class WatiSyntaxCompletionProvider implements vscode.CompletionItemProvider {
 	}
 }
 
+/** @typedef {import("./types.d.ts").VariablesInFile} VariablesInFile */
+/** @typedef {import("./types.d.ts").Variable} Variable */
+/** @typedef {import("./types.d.ts").VariableByName} VariableByName */
+/** @typedef {import("./types.d.ts").VariableType} VariableType */
+
 // HOVER
-const files: IFileVariables = {};
-const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile => {
-	const returned: VariablesInFile = { globals: {}, functions: {} };
+/** @type {import("./types.d.ts").IFileVariables} */
+const files = {};
+/** 
+ * @param {vscode.TextDocument} document 
+ * @returns {VariablesInFile}
+ * */
+const getVariablesInFile = (document) => {
+	/** @type {VariablesInFile} */
+	const returned = { globals: {}, functions: {} };
 	const text = document.getText();
 	let globals = [...text.matchAll(getGlobals)];
 	globals.forEach((match) => {
 		returned.globals[match[1]] = {
 			name: match[1],
 			isMutable: match[2] === "mut",
-			type: match[3] as VariableType,
+			type: /** @type {VariableType} */(match[3]),
 			initialValue: match[4],
 		};
 	});
@@ -324,13 +349,13 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile => {
 			name = "__WATI_EXPORTED__" + exportName;
 		}
 
-		let parameters: Variable[] = [];
-		if (paramString) {
-			const paramMatch = [...paramString.matchAll(getParamsOrLocals)];
-			parameters = paramMatch.map(getNameType);
-		}
+		/** @type {Variable[]} */
+		const parameters = paramString 
+			? [...paramString.matchAll(getParamsOrLocals)].map(getNameType)
+			: [];
 
-		let locals: VariableByName = {};
+		/** @type {VariableByName} */
+		const locals = {};
 		if (localString) {
 			const localMatch = [...localString.matchAll(getParamsOrLocals)];
 			const localsArr = localMatch.map(getNameType);
@@ -343,19 +368,20 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile => {
 
 		returned.functions[name] = {
 			name,
-			returnType: !returnType ? null : (returnType as VariableType),
+			returnType: !returnType ? null : /** @type {VariableType}*/(returnType),
 			parameters,
 			locals,
 			blocks: {},
 		};
 	});
+
 	const lines = text.split(/^/gm);
-	for (var i = 0; i < lines.length; i++) {
+	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		const block = line.match(getBlock);
 		if (!block) continue;
 		const [_, blockType, blockLabel] = block;
-		const funcNameOfBlock = getCurFunc(document, { line: i });
+		const funcNameOfBlock = getCurFunc(document, i);
 		if (!funcNameOfBlock) continue;
 		const funcOfBlock = returned.functions[funcNameOfBlock];
 		if (!funcOfBlock) continue;
@@ -367,30 +393,42 @@ const getVariablesInFile = (document: vscode.TextDocument): VariablesInFile => {
 	}
 	return returned;
 };
-const updateFiles = (document: vscode.TextDocument) => {
+
+/** @param {vscode.TextDocument} document */
+const updateFiles = (document) => {
 	// if is wati or is wat and wat is enabled
-	if (
-		document.languageId === "wati" ||
-		(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles)
-	) {
-		files[document.uri.path] = getVariablesInFile(document);
+	const enabled = document.languageId === "wati" ||
+	(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles);
+	if (!enabled) return;
+	
+	files[document.uri.path] = getVariablesInFile(document);
+
+	const parser = getParser();
+	if (parser) {
+		const tree = parser.parse(document.getText());
+		fileTreeSitterMap.set(document.uri.path, { tree });
 	}
 };
-const getNameType = (m: RegExpMatchArray) => {
-	let name: string | undefined;
-	let type: VariableType = "unknown";
-	m.forEach((v: string | VariableType | null) => {
+
+/** @param {RegExpMatchArray} m */
+const getNameType = (m) => {
+	/** @type {string | undefined} */
+	let name = undefined;
+	/** @type {VariableType} */
+	let type = "unknown";
+	m.forEach((v) => {
 		// if v starts with $ it is the name,
 		// if v doesn't and it is not null
 		// it is the type
 		if (v?.startsWith("$")) {
 			name = v;
 		} else if (!!v) {
-			type = v as VariableType;
+			type = /** @type {VariableType} */ (v);
 		}
 	});
 	return { name, type };
 };
+
 const getGlobals = /\(global (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (?:\((mut) *)*(i32|i64|f32|f64)(?:\s*\(([^)]+)\))?/g;
 const getParamsOrLocals =
 	/(?: *\((?:(?:param +|local +|l)(?:(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) +)*(i32|i64|f32|f64)|(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*) (i32|i64|f32|f64))| (i32|i64|f32|f64))/g;
@@ -402,9 +440,15 @@ const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\(
 const getExport = /\(\s*export\s*"([^"]+)"\)/;
 const getBlock = /(?:\s+|^)(block|loop|if)\s*(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 
-const getCurFunc = (document: vscode.TextDocument, { line: curLineNum }: { line: number }) => {
+/** 
+ * @param {vscode.TextDocument} document 
+ * @param {number} line
+ * */
+const getCurFunc = (document, line) => {
 	// this is a hacky solution but since it is only used for local vars it works fine
-	let curFunc: string | undefined;
+	/** @type {string | void} */
+	let curFunc = undefined;
+	let curLineNum = line;
 	while (curLineNum > 0) {
 		const curLine = document.lineAt(curLineNum).text;
 		if (isLineAFunc.test(curLine)) {
@@ -424,29 +468,46 @@ const getCurFunc = (document: vscode.TextDocument, { line: curLineNum }: { line:
 	return curFunc;
 };
 
-const getStringFromFuncRef = (func: FunctionDescriptor) => {
+/** @param {import("./types.d.ts").FunctionDescriptor} func */
+const getStringFromFuncRef = (func) => {
 	return `(func ${func.name}${func.parameters.length === 0 ? "" : " "}${func.parameters
 		.map((v) => `(${v.name ? v.name + " " : ""}${v.type})`)
 		.join(" ")})\n(result${func.returnType ? " " + func.returnType : ""})`;
 };
 
-class WatiHoverProvider implements vscode.HoverProvider {
-	public provideHover(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-		token: vscode.CancellationToken
-	): vscode.Hover | null {
+
+class WatiHoverProvider {
+	/** @type {vscode.HoverProvider['provideHover']} */
+	provideHover( document, position, token ) {
 		// disable if wat and not on in wat
 		if (document.languageId === "wat" && !vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles) {
 			return null;
 		}
 		updateFiles(document);
 
-		const word = document.getText(document.getWordRangeAtPosition(position, /[^ ();,]+/)).trim();
+		const positionRange = document.getWordRangeAtPosition(position, /[^ ();,]+/);
+		if (!positionRange) return null;
+
+		const word = document.getText(positionRange).trim();
+		if (instructionDocs[word]) {
+			return new vscode.Hover(instructionDocs[word]);
+		}
+
+		// tree-sitter logic
+		{
+			const fileData = fileTreeSitterMap.get(document.uri.path);
+			if (!fileData) return null;
+
+			const position = { row: positionRange.start.line, column: positionRange.start.character };
+			const node = fileData.tree.rootNode.descendantForPosition(position);
+			const hoverData = getHoverData(node);
+			if (hoverData) return hoverData;
+		}
+
 		const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
 
 		// get the current function
-		const curFunc = getCurFunc(document, position);
+		const curFunc = getCurFunc(document, position.line);
 
 		// the chars that should never have a hover
 		switch (char) {
@@ -551,40 +612,4 @@ class WatiHoverProvider implements vscode.HoverProvider {
 		return null;
 		// DEBUG: return new vscode.Hover(`${word}\n\nline: ${position.line}\ncharacter: ${position.character}`);
 	}
-}
-
-interface IFileVariables {
-	[key: string]: VariablesInFile;
-}
-interface VariablesInFile {
-	globals: VariableByName;
-	functions: { [key: string]: FunctionDescriptor };
-}
-interface FunctionDescriptor {
-	// includes the $
-	name: string;
-	parameters: Variable[];
-	returnType: VariableType;
-	locals: VariableByName;
-	blocks: BlockByName;
-}
-interface VariableByName {
-	// includes the $
-	[key: string]: Variable;
-}
-interface Variable {
-	type: VariableType;
-	isMutable?: boolean;
-	name: string | undefined; // includes the $, is undefined if no name (just indexed)
-	initialValue?: string;
-}
-type VariableType = "i32" | "i64" | "f32" | "f64" | "unknown" | null;
-interface Block {
-	type: string;
-	label: string; // only blocks with labels are stored
-	lineNum: number;
-}
-interface BlockByName {
-	// includes the $
-	[key: string]: Block;
 }

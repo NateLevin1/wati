@@ -26,7 +26,7 @@
 	"extensionDependencies": [
 		"dtsvet.vscode-wasm"
 	],
-	"main": "./out/extension.js",
+	"main": "./src/extension.js",
 	"contributes": {
 		"languages": [
 			{
@@ -60,12 +60,8 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js"
+		"pretest": "npm run lint",
+		"lint": "eslint src --ext ts"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.3",
@@ -80,5 +76,8 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/NateLevin1/wati"
+	},
+	"dependencies": {
+		"web-tree-sitter": "^0.20.8"
 	}
 }
