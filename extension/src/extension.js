@@ -16,27 +16,27 @@ function activate(context) {
 	// WATI
 	context.subscriptions.push(vscode.languages.registerHoverProvider(wati, new WatiHoverProvider()));
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider(wati, new WatiVariableCompletionProvider(), ".", "$", "@")
+		vscode.languages.registerCompletionItemProvider(wati, new WatiVariableCompletionProvider(), ".", "$", "@"),
 	);
 	context.subscriptions.push(
 		vscode.languages.registerCompletionItemProvider(
 			wati,
 			new WatiSyntaxCompletionProvider(),
-			...WatiSyntaxCompletionProvider.triggerCharacters
-		)
+			...WatiSyntaxCompletionProvider.triggerCharacters,
+		),
 	);
 	context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(wati, new WatiSignatureHelpProvider(), "(", ","));
 	// WAT
 	context.subscriptions.push(vscode.languages.registerHoverProvider(wat, new WatiHoverProvider()));
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider(wat, new WatiVariableCompletionProvider(), ".", "$", "@")
+		vscode.languages.registerCompletionItemProvider(wat, new WatiVariableCompletionProvider(), ".", "$", "@"),
 	);
 	context.subscriptions.push(
 		vscode.languages.registerCompletionItemProvider(
 			wat,
 			new WatiSyntaxCompletionProvider(),
-			...WatiSyntaxCompletionProvider.triggerCharacters
-		)
+			...WatiSyntaxCompletionProvider.triggerCharacters,
+		),
 	);
 	context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(wat, new WatiSignatureHelpProvider(), "(", ","));
 }
@@ -67,9 +67,7 @@ class WatiSignatureHelpProvider {
 				if (funcRef) {
 					const sig = new vscode.SignatureInformation(getStringFromFuncRef(funcRef));
 					sig.parameters = [
-						...funcRef.parameters
-							.filter((p) => !!p.name)
-							.map((p) => new vscode.ParameterInformation(`(${p.name} ${p.type})`)),
+						...funcRef.parameters.filter((p) => !!p.name).map((p) => new vscode.ParameterInformation(`(${p.name} ${p.type})`)),
 					];
 					sigHelp.activeParameter = (args.match(/,/g) ?? []).length;
 					sigHelp.activeSignature = 0;
@@ -92,10 +90,10 @@ class WatiSignatureHelpProvider {
 }
 
 /**
- * 
- * @param {string} line 
- * @param {number} cursorPos 
- * @param {string | void} previousLine 
+ *
+ * @param {string} line
+ * @param {number} cursorPos
+ * @param {string | void} previousLine
  * @returns {string}
  */
 const getCallAtCursor = (line, cursorPos, previousLine) => {
@@ -138,7 +136,7 @@ const getCallAtCursor = (line, cursorPos, previousLine) => {
 
 /**
  * COMPLETION
- * 
+ *
  * @param {{
  * prefix: string;
  * wasmInstr: string;
@@ -146,16 +144,9 @@ const getCallAtCursor = (line, cursorPos, previousLine) => {
  * position: vscode.Position;
  * wasmAfterVar?: string;
  * command?: vscode.Command;
- * }} mapVariablesParams 
+ * }} mapVariablesParams
  */
-const mapVariables = ({
-	prefix,
-	wasmInstr,
-	variables,
-	position,
-	wasmAfterVar,
-	command,
-}) => {
+const mapVariables = ({ prefix, wasmInstr, variables, position, wasmAfterVar, command }) => {
 	return variables.map((completionItem) => {
 		const varName = completionItem.label;
 		const fullTypedText = prefix + "$" + varName;
@@ -168,7 +159,6 @@ const mapVariables = ({
 		});
 	});
 };
-
 
 class WatiVariableCompletionProvider {
 	/** @type {vscode.CompletionItemProvider['provideCompletionItems']} */
@@ -200,7 +190,7 @@ class WatiVariableCompletionProvider {
 									return [str];
 								})
 								.join("")}${parameters.length > 0 ? "\n\n" : ""}(result${returnType ? " " + returnType : ""})`,
-						})
+						}),
 					);
 			}
 
@@ -210,7 +200,7 @@ class WatiVariableCompletionProvider {
 			if (curFunc && isBranch) {
 				return [
 					...Object.values(files[document.uri.path].functions[curFunc].blocks).map((v) =>
-						makeCompletionItem({ name: v.label }.name.slice(1), { detail: `${v.type} ${v.label} on line ${v.lineNum}` })
+						makeCompletionItem({ name: v.label }.name.slice(1), { detail: `${v.type} ${v.label} on line ${v.lineNum}` }),
 					),
 				];
 			}
@@ -226,7 +216,7 @@ class WatiVariableCompletionProvider {
 							.filter((v) => !!v.name)
 							// @ts-expect-error - v.name is not undefined
 							.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(param) ${v.type}` })),
-				  ]
+					]
 				: [];
 
 			if (isLocalVar) {
@@ -281,16 +271,10 @@ class WatiVariableCompletionProvider {
 	}
 }
 
-
 class WatiSyntaxCompletionProvider {
 	static triggerCharacters = ["2", "4", "$"];
 	/** @type {vscode.CompletionItemProvider['provideCompletionItems']} */
-	provideCompletionItems(
-		document,
-		position,
-		token,
-		completionContext
-	) {
+	provideCompletionItems(document, position, token, completionContext) {
 		// disable if wat and not on in wat
 		if (document.languageId === "wat" && !vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles) {
 			return undefined;
@@ -316,8 +300,8 @@ class WatiSyntaxCompletionProvider {
 // HOVER
 /** @type {import("./types.d.ts").IFileVariables} */
 const files = {};
-/** 
- * @param {vscode.TextDocument} document 
+/**
+ * @param {vscode.TextDocument} document
  * @returns {VariablesInFile}
  * */
 const getVariablesInFile = (document) => {
@@ -329,7 +313,7 @@ const getVariablesInFile = (document) => {
 		returned.globals[match[1]] = {
 			name: match[1],
 			isMutable: match[2] === "mut",
-			type: /** @type {VariableType} */(match[3]),
+			type: /** @type {VariableType} */ (match[3]),
 			initialValue: match[4],
 		};
 	});
@@ -350,9 +334,7 @@ const getVariablesInFile = (document) => {
 		}
 
 		/** @type {Variable[]} */
-		const parameters = paramString 
-			? [...paramString.matchAll(getParamsOrLocals)].map(getNameType)
-			: [];
+		const parameters = paramString ? [...paramString.matchAll(getParamsOrLocals)].map(getNameType) : [];
 
 		/** @type {VariableByName} */
 		const locals = {};
@@ -368,7 +350,7 @@ const getVariablesInFile = (document) => {
 
 		returned.functions[name] = {
 			name,
-			returnType: !returnType ? null : /** @type {VariableType}*/(returnType),
+			returnType: !returnType ? null : /** @type {VariableType}*/ (returnType),
 			parameters,
 			locals,
 			blocks: {},
@@ -397,10 +379,11 @@ const getVariablesInFile = (document) => {
 /** @param {vscode.TextDocument} document */
 const updateFiles = (document) => {
 	// if is wati or is wat and wat is enabled
-	const enabled = document.languageId === "wati" ||
-	(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles);
+	const enabled =
+		document.languageId === "wati" ||
+		(document.languageId === "wat" && vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles);
 	if (!enabled) return;
-	
+
 	files[document.uri.path] = getVariablesInFile(document);
 
 	const parser = getParser();
@@ -440,8 +423,8 @@ const getNameAndParamOfCall = /call (\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)(\(
 const getExport = /\(\s*export\s*"([^"]+)"\)/;
 const getBlock = /(?:\s+|^)(block|loop|if)\s*(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_`|~]*)/;
 
-/** 
- * @param {vscode.TextDocument} document 
+/**
+ * @param {vscode.TextDocument} document
  * @param {number} line
  * */
 const getCurFunc = (document, line) => {
@@ -475,10 +458,9 @@ const getStringFromFuncRef = (func) => {
 		.join(" ")})\n(result${func.returnType ? " " + func.returnType : ""})`;
 };
 
-
 class WatiHoverProvider {
 	/** @type {vscode.HoverProvider['provideHover']} */
-	provideHover( document, position, token ) {
+	provideHover(document, position, token) {
 		// disable if wat and not on in wat
 		if (document.languageId === "wat" && !vscode.workspace.getConfiguration("wati").useIntellisenseInWatFiles) {
 			return null;
@@ -539,7 +521,7 @@ class WatiHoverProvider {
 				const out = new vscode.MarkdownString();
 				out.appendCodeblock(
 					`(global ${valAtGlobal.name} ${valAtGlobal.type}) ${valAtGlobal.isMutable === true ? "(mut)" : ""}`,
-					"wati"
+					"wati",
 				);
 				if (valAtGlobal.initialValue) {
 					out.appendCodeblock("  = " + valAtGlobal.initialValue, "wati");

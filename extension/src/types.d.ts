@@ -1,5 +1,3 @@
-
-
 export interface IFileVariables {
 	[key: string]: VariablesInFile;
 }

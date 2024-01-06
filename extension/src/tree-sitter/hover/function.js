@@ -36,7 +36,7 @@ const functionHoverQuery = `
  * @returns {vscode.Hover}
  * */
 function getFunctionHoverString(language, node) {
-  const functionIdent = getIdent(node);
+	const functionIdent = getIdent(node);
 
 	const moduleNode = getParentNode(node, "module");
 	if (!moduleNode) return new vscode.Hover("Could not resolve module");
@@ -56,9 +56,7 @@ function getFunctionHoverString(language, node) {
 
 		let hoverCode = `(func ${ident}`;
 
-		const params = captures
-			.filter(({ name }) => name === "params_type")
-			.map(({ node }) => node.text);
+		const params = captures.filter(({ name }) => name === "params_type").map(({ node }) => node.text);
 		if (params.length) hoverCode += ` (param ${params.join(" ")})`;
 
 		const result = captures.find(({ name }) => name === "result_type")?.node.text;

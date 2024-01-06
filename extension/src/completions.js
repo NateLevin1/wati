@@ -1,9 +1,9 @@
 const vscode = require("vscode");
 
 /**
- * 
- * @param {string} label 
- * @param {Partial<vscode.CompletionItem>} options 
+ *
+ * @param {string} label
+ * @param {Partial<vscode.CompletionItem>} options
  * @returns {vscode.CompletionItem}
  */
 const makeCompletionItem = (label, options) => {
@@ -21,9 +21,9 @@ const makeCompletionItem = (label, options) => {
 module.exports.makeCompletionItem = makeCompletionItem;
 
 /**
- * 
+ *
  * @param {string[]} instrs instructions
- * @param {"i32" | "i64" | "f32" | "f64"} type 
+ * @param {"i32" | "i64" | "f32" | "f64"} type
  */
 const instrsToCompletionItems = (instrs, type) => {
 	return instrs.map((instr) => {
@@ -71,16 +71,16 @@ const instructionDocs = {
 		'Allows for calling of external functions within WebAssembly.\nOften corresponds to JavaScript or a WASI call.\n\nE.g.\n```wat\n(import "MODULE_NAME" "ENTITY_NAME" (func $identifier (param i32) (result i32)))\n```',
 	export: [
 		"Export a value for use in the host environment. Syntax:",
-		"```wat\n(export \"exportName\" (; some value ;))\n```",
+		'```wat\n(export "exportName" (; some value ;))\n```',
 		"Examples:",
 		"```wat",
-		"(export \"mem\" (memory 0))",
-		"(export \"getNum\" (func $get_num))",
-		"(func $double_num (export \"doubleNum\") (param i32) ;; inline-export",
+		'(export "mem" (memory 0))',
+		'(export "getNum" (func $get_num))',
+		'(func $double_num (export "doubleNum") (param i32) ;; inline-export',
 		"\t;; ...",
 		")",
-		"\n```"
-	].join('\n'),
+		"\n```",
+	].join("\n"),
 	func: "Declares a new function, with an optional name.\n```wat\n(func $function_name (;...params;) (;result;)\n\t;; ...\n)\n```",
 	global:
 		"Declares a new global variable, with a type, instruction, and an optional name.\n```wat\n(global $name TYPE ((;instr, eg;) i32.const 0)\n```",
@@ -91,27 +91,27 @@ const instructionDocs = {
 		"```wat\n(table $funcs_table 2 funcref)\n(table $externs_table 2 10 externref)\n```\n",
 		"Size can be omitted when inlining an `elem` declaration:",
 		"```wat\n(table $funcs_table funcref (elem $id1 $id2 $id3))\n```",
-	].join('\n'),
+	].join("\n"),
 	elem: [
 		"Declares the elements of a table. Uses the syntax:",
 		"```wat\n(elem $table_name (i32.const INITIAL_INDEX) $id1 $id2 $id3)\n```",
 		"Example:",
 		"```wat\n(table $funcs_table 2 funcref)\n(elem $funcs_table (i32.const 0) $f1 $f2)\n```",
 		"It can optionally include a type:",
-		"```wat\n(; ...some table... ;)\n(elem $funcs_table (i32.const 0) func $f1 $f2)\n```"
-	].join('\n'),
+		"```wat\n(; ...some table... ;)\n(elem $funcs_table (i32.const 0) func $f1 $f2)\n```",
+	].join("\n"),
 	"table.set": [
 		"Sets the value of a table at an index. Syntax:",
 		"```wat\n(table.set $table_id INDEX NEW_VALUE)\n```",
 		"Example:",
 		"```wat\n(table.set $funcs_table (i32.const 2) (local.get $func_ref))\n```",
-	].join('\n'),
+	].join("\n"),
 	"table.get": [
 		"Gets the value of a table at an index. Syntax:",
 		"```wat\n(table.get $table_id INDEX)\n```",
 		"Example:",
 		"```wat\n(table.get $funcs_table (i32.const 2))\n```",
-	].join('\n'),
+	].join("\n"),
 	"table.size": "Get current size of a table (in pages). Syntax:\n```wat\n(table.get $table_id)\n```",
 	"table.grow": [
 		"Grows a table by a given amount and returns the previous size. It fills the new entries with a provided init value.",
@@ -119,25 +119,25 @@ const instructionDocs = {
 		"```wat\n(table.grow $table_id REFERENCE (i32.const NUMBER))\n```",
 		"Example:",
 		"```wat\n(table.grow $funcs_table (ref.null func) (i32.const 5))\n```",
-	].join('\n'),
+	].join("\n"),
 	"table.fill": [
 		"Set all entries in a given range to a value. Syntax:",
 		"```wat\n(table.fill $table_id SOURCE_INDEX FILL_VALUE LENGTH)\n```",
 		"Example:",
 		"```wat\n(table.fill $funcs_table (i32.const 0) (ref.null func) (i32.const 10))\n```",
-	].join('\n'),
+	].join("\n"),
 	"table.copy": [
 		"Copy elements from a range into another (possibly overlapping) region in a table. Syntax:",
 		"```wat\n(table.copy $table_id SOURCE_INDEX DEST_INDEX LENGTH)\n```",
 		"Example:",
 		"```wat\n(table.copy $funcs_table (i32.const 0) (i32.const 7) (i32.const 10))\n```",
-	].join('\n'),
+	].join("\n"),
 	"table.init": [
-		"Copies items from a \"passive element segment\" into a table. Syntax:",
+		'Copies items from a "passive element segment" into a table. Syntax:',
 		"```wat\n(table.init $elem_id DESTINATION_INDEX SOURCE_INDEX AMOUNT)\n```",
 		"Example:",
 		"```wat\n(table.init $funcs_elem (i32.const 0) (i32.const 0) (i32.const 5))\n```",
-	].join('\n'),
+	].join("\n"),
 	"elem.drop": "Prevents use of a given passive element segment. Syntax:\n````wat\n(elem.drop $elem_id)\n````",
 	call_indirect: [
 		"Call a function retrieved from a table. A specific type must be specified. Syntax:",
@@ -149,12 +149,13 @@ const instructionDocs = {
 		"(; in some function: ;)",
 		"(call_indirect $funcs_table (type $f64_to_i32) (i32.const 0) (f64.const 5.4))",
 		"```",
-	].join('\n'),
+	].join("\n"),
 	funcref: "The type for a reference to a function or null",
 	externref: "The type for any external reference or null",
 	extern: "The type for an external reference",
 	"ref.func": "Gets a reference for a function. Syntax:\n```wat\n(ref.func $func_id)\n```",
-	"ref.null": "Gets a null reference for a function or extern. Syntax:\n```wat\n(ref.null func) ;; empty ref for func type\n(ref.null extern) ;; empty ref for extern type\n```",
+	"ref.null":
+		"Gets a null reference for a function or extern. Syntax:\n```wat\n(ref.null func) ;; empty ref for func type\n(ref.null extern) ;; empty ref for extern type\n```",
 	"ref.is_null": "Checks if a reference is empty. Syntax:\n```wat\n(ref.null $ref_id)\n```",
 	data: 'Allows for directly adding strings into a module\'s memory at a specified offset, similar to the .data section in traditional assembly.\n```wat\n(data (i32.const (;offset here;)) "Some string here")\n```',
 	"data.drop": "Prevent use of a data segment. Syntax:\n```wat\n(data.drop $data_id)\n```",
@@ -162,9 +163,10 @@ const instructionDocs = {
 	"memory.size": "Gets the current size of a memory (in pages). Syntax:\n```wat\n(memory.size $memory_id)\n```",
 	"memory.grow":
 		"Grows a memory by a given delta in page size and returns the previous size, or -1 if enough memory cannot be allocated.",
-	"memory.init": "Copies items from a \"passive element segment\" into memory.",
+	"memory.init": 'Copies items from a "passive element segment" into memory.',
 	"memory.fill": "Fills memory region with provided value. Syntax:\n```wat\n(memory.fill START_INDEX VALUE LENGTH)\n```",
-	"memory.copy": "Copies range of memory to another (possibly overlapping) location. Syntax:\n```wat\n(memory.copy START_INDEX DEST_INDEX LENGTH)\n```",
+	"memory.copy":
+		"Copies range of memory to another (possibly overlapping) location. Syntax:\n```wat\n(memory.copy START_INDEX DEST_INDEX LENGTH)\n```",
 	param: "Creates a parameter for a function with an optional name.\n```wat\n(param $name TYPE)\n```",
 	result:
 		"Specifies the result/return value for a function.\nSpecifying more than one type is supported in most implementations, see the [archived multi-value proposal](https://github.com/WebAssembly/multi-value).\n```wat\n(result ...TYPE)\n```",
@@ -178,14 +180,8 @@ const instructionDocs = {
 	select:
 		"Selects one of its first two operands based on whether its third operand is zero or not. It may include a value type determining the type of these operands.",
 	call: "Call a function specified by name or index.",
-	loop: [
-		"Define a block with a label at the **start**. Syntax:",
-		"```wat\n(loop $loop_id \n\t;; ...\n)\n```"
-	].join('\n'),
-	block: [
-		"Define a block with a label at the **end**. Syntax:",
-		"```wat\n(block $block_id \n\t;; ...\n)\n```"
-	].join('\n'),
+	loop: ["Define a block with a label at the **start**. Syntax:", "```wat\n(loop $loop_id \n\t;; ...\n)\n```"].join("\n"),
+	block: ["Define a block with a label at the **end**. Syntax:", "```wat\n(block $block_id \n\t;; ...\n)\n```"].join("\n"),
 	if: [
 		"Execute code blocks depending on whether a stack value is 0. Syntax:",
 		"```wat",
@@ -204,17 +200,18 @@ const instructionDocs = {
 		"  ;; code to execute if zero",
 		"end",
 		"```",
-	].join('\n'),
+	].join("\n"),
 	then: "Defines a block to execute if conditional is non-zero.",
 	else: "Defines a block to execute if conditional is zero.",
 	br: "Branch instruction. Jumps to $label_id. Syntax: \n```wat\n(br $label_id)\n```",
-	br_if: "Conditional branch instruction. Jumps to $label_id if conditional value is non-zero. Syntax: \n```wat\n(br_if $label_id (; conditional value ;))\n```",
+	br_if:
+		"Conditional branch instruction. Jumps to $label_id if conditional value is non-zero. Syntax: \n```wat\n(br_if $label_id (; conditional value ;))\n```",
 	br_table: [
 		"Table branch instruction. Jumps to one of the $label_ids based off of a provided index. Syntax:",
 		"```wat",
 		"(br_table $label_id1 $label_id2 $label_id3 (; index ;))",
 		"```",
-	].join('\n'),
+	].join("\n"),
 	unreachable: "Declares an unreachable section of code.",
 	return: "Jumps to the end of the current function.",
 	nop: "no-op. Does nothing.",

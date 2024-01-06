@@ -17,14 +17,14 @@ const getLabelHoverString = require("./label.js");
  * @returns {vscode.Hover | undefined}
  * */
 function getHoverData(language, node) {
-	if (node.type !== "identifier" && node.type !== 'dec_nat') return;
+	if (node.type !== "identifier" && node.type !== "dec_nat") return;
 
 	let parent = node.parent;
-	if (node.type === 'dec_nat') {
+	if (node.type === "dec_nat") {
 		parent = node.parent?.parent ?? null;
 	}
 	if (!parent) return;
-	
+
 	if (parent.type === "expr1_loop" || parent.type === "expr1_block") {
 		return getLabelHoverString(language, node);
 	}
@@ -32,13 +32,7 @@ function getHoverData(language, node) {
 		return getGlobalHoverString(language, node);
 	}
 
-	if (
-		[
-			"module_field_func",
-			"import_desc_func_type",
-			"func_type_params_one",
-		].includes(parent.type)
-	) {
+	if (["module_field_func", "import_desc_func_type", "func_type_params_one"].includes(parent.type)) {
 		return getFunctionHoverString(language, node);
 	}
 	if (parent.parent?.type === "export_desc_func") {

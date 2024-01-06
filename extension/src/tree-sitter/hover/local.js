@@ -39,8 +39,7 @@ function getLocalHoverString(language, node) {
 	const localIdent = getIdent(node);
 
 	const moduleNode = getParentNode(node, "module_field_func");
-	if (!moduleNode)
-		return new vscode.Hover("Could not resolve current function");
+	if (!moduleNode) return new vscode.Hover("Could not resolve current function");
 
 	const params = [];
 	const localTypes = [];
@@ -63,13 +62,13 @@ function getLocalHoverString(language, node) {
 		}
 	}
 
-	const localIdentIndex = typeof localIdent === 'number' ? localIdent : identToIndex.get(localIdent);
+	const localIdentIndex = typeof localIdent === "number" ? localIdent : identToIndex.get(localIdent);
 	if (typeof localIdentIndex !== "number") {
 		return new vscode.Hover("No such local variable in scope");
 	}
 
 	const localType = localIdentIndex < params.length ? "param" : "local";
-	const name = typeof localIdent === 'string' ? localIdent : indexToIdent.get(localIdent) ?? localIdent;
+	const name = typeof localIdent === "string" ? localIdent : indexToIdent.get(localIdent) ?? localIdent;
 	const hoverCode = `(${localType} ${name} (${localTypes[localIdentIndex]}))`;
 
 	const out = new vscode.MarkdownString();

@@ -9,9 +9,7 @@ let languageWasm;
 let parser;
 
 Parser.init()
-	.then(() =>
-		Parser.Language.load(path.join(__dirname, "tree-sitter-wat.wasm")),
-	)
+	.then(() => Parser.Language.load(path.join(__dirname, "tree-sitter-wat.wasm")))
 	.then((wasm) => {
 		languageWasm = wasm;
 		parser = new Parser();
