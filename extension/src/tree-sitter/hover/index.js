@@ -32,6 +32,10 @@ function getHoverData(language, node) {
 		return getGlobalHoverString(language, node);
 	}
 
+	if (parent.type === 'func_type_params_one') {
+		return getLocalHoverString(language, node);
+	}
+
 	if (["module_field_func", "import_desc_func_type", "func_type_params_one"].includes(parent.type)) {
 		return getFunctionHoverString(language, node);
 	}
