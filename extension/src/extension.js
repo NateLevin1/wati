@@ -204,7 +204,7 @@ class WatiVariableCompletionProvider {
 					);
 			}
 
-			const curFunc = getCurFunc(document, position);
+			const curFunc = getCurFunc(document, position.line);
 
 			const isBranch = linePrefix.match(/br(?:_if)?\s*\$$/);
 			if (curFunc && isBranch) {
@@ -220,9 +220,11 @@ class WatiVariableCompletionProvider {
 				? [
 						...Object.values(files[document.uri.path].functions[curFunc].locals)
 							.filter((v) => !!v.name)
+							// @ts-expect-error - v.name is not undefined
 							.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(local) ${v.type}` })),
 						...files[document.uri.path].functions[curFunc].parameters
 							.filter((v) => !!v.name)
+							// @ts-expect-error - v.name is not undefined
 							.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(param) ${v.type}` })),
 				  ]
 				: [];
@@ -250,7 +252,8 @@ class WatiVariableCompletionProvider {
 			const isGlobalVar = linePrefix.endsWith("g$");
 			const globalVariables = Object.values(files[document.uri.path].globals)
 				.filter((v) => !!v.name)
-				.map((v) => makeCompletionItem((v).name.slice(1), { detail: `(global) ${v.type}` }));
+				// @ts-expect-error - v.name is not undefined
+				.map((v) => makeCompletionItem(v.name.slice(1), { detail: `(global) ${v.type}` }));
 
 			if (isGlobalVar) {
 				return mapVariables({ prefix: "g", wasmInstr: "global.get", variables: globalVariables, position });
@@ -378,7 +381,7 @@ const getVariablesInFile = (document) => {
 		const block = line.match(getBlock);
 		if (!block) continue;
 		const [_, blockType, blockLabel] = block;
-		const funcNameOfBlock = getCurFunc(document, { line: i });
+		const funcNameOfBlock = getCurFunc(document, i);
 		if (!funcNameOfBlock) continue;
 		const funcOfBlock = returned.functions[funcNameOfBlock];
 		if (!funcOfBlock) continue;
@@ -409,8 +412,8 @@ const updateFiles = (document) => {
 
 /** @param {RegExpMatchArray} m */
 const getNameType = (m) => {
-	/** @type {string | void} */
-	let name;
+	/** @type {string | undefined} */
+	let name = undefined;
 	/** @type {VariableType} */
 	let type = "unknown";
 	m.forEach((v) => {
@@ -439,12 +442,13 @@ const getBlock = /(?:\s+|^)(block|loop|if)\s*(\$[0-9A-Za-z!#$%&'*+\-./:<=>?@\\^_
 
 /** 
  * @param {vscode.TextDocument} document 
- * @param {vscode.Position} position
+ * @param {number} line
  * */
-const getCurFunc = (document, { line: curLineNum }) => {
+const getCurFunc = (document, line) => {
 	// this is a hacky solution but since it is only used for local vars it works fine
 	/** @type {string | void} */
-	let curFunc;
+	let curFunc = undefined;
+	let curLineNum = line;
 	while (curLineNum > 0) {
 		const curLine = document.lineAt(curLineNum).text;
 		if (isLineAFunc.test(curLine)) {
@@ -503,7 +507,7 @@ class WatiHoverProvider {
 		const char = document.getText(new vscode.Range(position, new vscode.Position(position.line, position.character + 1)));
 
 		// get the current function
-		const curFunc = getCurFunc(document, position);
+		const curFunc = getCurFunc(document, position.line);
 
 		// the chars that should never have a hover
 		switch (char) {
