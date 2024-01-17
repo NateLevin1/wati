@@ -69,7 +69,7 @@ function getLocalHoverString(language, node) {
 
 	const localType = localIdentIndex < params.length ? "param" : "local";
 	const name = typeof localIdent === "string" ? localIdent : indexToIdent.get(localIdent) ?? localIdent;
-	const hoverCode = `(${localType} ${name} (${localTypes[localIdentIndex]}))`;
+	const hoverCode = `(${localType} ${name} ${localTypes[localIdentIndex]})`;
 
 	const out = new vscode.MarkdownString();
 	out.appendCodeblock(hoverCode, "wati");

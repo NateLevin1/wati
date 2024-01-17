@@ -21,7 +21,7 @@ function getTableHoverString(language, node) {
 
 	const moduleNode = getParentNode(node, "module");
 	if (!moduleNode) {
-		return new vscode.Hover("Could not resolve current function");
+		return new vscode.Hover("Could not resolve current module");
 	}
 
 	const matches = queryWithErr(language, tableHoverQuery, moduleNode);

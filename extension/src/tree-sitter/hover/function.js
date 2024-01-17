@@ -25,7 +25,7 @@ const functionHoverQuery = `
         ) 
       ]
     )*
-    (func_type_results (value_type) @result_type)? 
+    (func_type_results (value_type)+ @result_type)? 
   )
   ]
 `;
@@ -56,11 +56,29 @@ function getFunctionHoverString(language, node) {
 
 		let hoverCode = `(func ${ident}`;
 
-		const params = captures.filter(({ name }) => name === "params_type").map(({ node }) => node.text);
-		if (params.length) hoverCode += ` (param ${params.join(" ")})`;
+		const params = [];
+		for (let i = 0; i < captures.length ; i++) {
+			const { name, node } = captures[i];
 
-		const result = captures.find(({ name }) => name === "result_type")?.node.text;
-		if (result) hoverCode += ` (result ${result})`;
+			if (name === 'params_ident') {
+				i++;
+				const paramIdent = node.text;
+				const paramType = captures[i].node.text;
+				params.push(`(param ${paramIdent} ${paramType})`);
+			} else if (name === 'params_type') {
+				const types = [];
+				while (i < captures.length && captures[i].name === 'params_type') {
+					types.push(captures[i].node.text);
+					i++;
+				}
+				params.push(`(param ${types.join(' ')})`);
+				i--;
+			}
+		}
+		if (params.length) hoverCode += ' ' + params.join(' ');
+
+		const result = captures.filter(({ name }) => name === "result_type").map(({ node }) => node.text);
+		if (result.length) hoverCode += ` (result ${result.join(' ')})`;
 
 		hoverCode += ")";
 
